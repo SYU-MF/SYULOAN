@@ -1,19 +1,19 @@
 import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, Smartphone, Shield, ArrowLeft } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
-import InputError from '@/components/input-error';
-import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import GlassInputError from '@/components/glass-input-error';
+import { GlassInput } from '@/components/ui/glass-input';
+import { GlassButton } from '@/components/ui/glass-button';
+import { GlassLabel } from '@/components/ui/glass-label';
 import AuthLayout from '@/layouts/auth-layout';
+// Utility to get CSRF token from meta tag
+function getCsrfToken() {
+    return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
+}
 
 type LoginForm = {
-    email: string;
-    password: string;
-    remember: boolean;
+    mobile_number: string;
 };
 
 interface LoginProps {
@@ -21,90 +21,217 @@ interface LoginProps {
     canResetPassword: boolean;
 }
 
+
+import { useState } from 'react';
+import { router } from '@inertiajs/react';
+
 export default function Login({ status, canResetPassword }: LoginProps) {
-    const { data, setData, post, processing, errors, reset } = useForm<Required<LoginForm>>({
-        email: '',
-        password: '',
-        remember: false,
+    const [step, setStep] = useState<'mobile' | 'otp'>('mobile');
+    const [otp, setOtp] = useState('');
+    const [otpInfo, setOtpInfo] = useState<{ otp: string; expires_at: string } | null>(null);
+    const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
+        mobile_number: '',
     });
 
-    const submit: FormEventHandler = (e) => {
+    const handleMobileSubmit: FormEventHandler = (e) => {
         e.preventDefault();
-        post(route('login'), {
-            onFinish: () => reset('password'),
+        setOtp('');
+        setOtpInfo(null);
+        post(route('login.request-otp'), {
+            preserveScroll: true,
+            onSuccess: (response: any) => {
+                const res = response?.data || response;
+                setOtpInfo({ otp: res.otp, expires_at: res.expires_at });
+                setStep('otp');
+            },
+        });
+    };
+
+    const [otpError, setOtpError] = useState<string | null>(null);
+    const handleOtpSubmit: FormEventHandler = async (e) => {
+        e.preventDefault();
+        setOtpError(null);
+        try {
+            const response = await fetch(route('login.verify-otp'), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                    mobile_number: data.mobile_number,
+                    otp,
+                }),
+            });
+            const res = await response.json();
+            if (res.success && res.redirect) {
+                window.location.href = res.redirect;
+            } else {
+                setOtpError(res.message || 'Invalid or expired OTP.');
+            }
+        } catch (err) {
+            setOtpError('An error occurred. Please try again.');
+        }
+    };
+
+    const handleLogout = () => {
+        // Use Inertia or fetch to POST to your logout route, then reload
+        fetch(route('logout'), {
+            method: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+            credentials: 'same-origin',
+        }).then(() => {
+            // Force a full reload to get a fresh CSRF token
+            window.location.replace(route('login'));
         });
     };
 
     return (
-        <AuthLayout title="Log in to your account" description="Enter your email and password below to log in">
+        <AuthLayout 
+            title={step === 'mobile' ? "Welcome Back" : "Verify Your Identity"} 
+            description={step === 'mobile' ? "Enter your mobile number to receive a secure OTP" : "Enter the 6-digit code sent to your phone"}
+        >
             <Head title="Log in" />
-
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            required
-                            autoFocus
-                            tabIndex={1}
-                            autoComplete="email"
-                            value={data.email}
-                            onChange={(e) => setData('email', e.target.value)}
-                            placeholder="email@example.com"
-                        />
-                        <InputError message={errors.email} />
-                    </div>
-
-                    <div className="grid gap-2">
-                        <div className="flex items-center">
-                            <Label htmlFor="password">Password</Label>
-                            {canResetPassword && (
-                                <TextLink href={route('password.request')} className="ml-auto text-sm" tabIndex={5}>
-                                    Forgot password?
-                                </TextLink>
-                            )}
+            
+            {step === 'mobile' && (
+                <form className="space-y-6" onSubmit={handleMobileSubmit}>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <GlassLabel htmlFor="mobile_number" className="flex items-center gap-2">
+                                <Smartphone className="h-4 w-4" />
+                                Mobile Number
+                            </GlassLabel>
+                            <GlassInput
+                                id="mobile_number"
+                                type="tel"
+                                required
+                                autoFocus
+                                tabIndex={1}
+                                autoComplete="tel"
+                                value={data.mobile_number}
+                                onChange={(e) => setData('mobile_number', e.target.value)}
+                                placeholder="09171234567"
+                                maxLength={11}
+                                disabled={processing}
+                                className="text-center text-lg tracking-wider"
+                            />
+                            <GlassInputError message={errors.mobile_number} />
                         </div>
-                        <Input
-                            id="password"
-                            type="password"
-                            required
-                            tabIndex={2}
-                            autoComplete="current-password"
-                            value={data.password}
-                            onChange={(e) => setData('password', e.target.value)}
-                            placeholder="Password"
-                        />
-                        <InputError message={errors.password} />
+                        
+                        <GlassButton 
+                            type="submit" 
+                            className="w-full h-14 text-base font-semibold" 
+                            tabIndex={2} 
+                            disabled={processing}
+                        >
+                            {processing ? (
+                                <>
+                                    <LoaderCircle className="h-5 w-5 animate-spin" />
+                                    Sending OTP...
+                                </>
+                            ) : (
+                                <>
+                                    <Shield className="h-5 w-5" />
+                                    Send Secure OTP
+                                </>
+                            )}
+                        </GlassButton>
                     </div>
-
-                    <div className="flex items-center space-x-3">
-                        <Checkbox
-                            id="remember"
-                            name="remember"
-                            checked={data.remember}
-                            onClick={() => setData('remember', !data.remember)}
+                    
+                    <div className="text-center">
+                        <p className="text-sm text-white/80 mb-2">
+                            Don't have an account?
+                        </p>
+                        <a 
+                            href={route('register')} 
+                            className="glass-link text-sm font-medium"
                             tabIndex={3}
-                        />
-                        <Label htmlFor="remember">Remember me</Label>
+                        >
+                            Create your account
+                        </a>
                     </div>
-
-                    <Button type="submit" className="mt-4 w-full" tabIndex={4} disabled={processing}>
-                        {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
-                        Log in
-                    </Button>
-                </div>
-
-                <div className="text-center text-sm text-muted-foreground">
-                    Don't have an account?{' '}
-                    <TextLink href={route('register')} tabIndex={5}>
-                        Sign up
-                    </TextLink>
-                </div>
-            </form>
-
-            {status && <div className="mb-4 text-center text-sm font-medium text-green-600">{status}</div>}
+                </form>
+            )}
+            
+            {step === 'otp' && (
+                <>
+                    {otpInfo && (
+                        <div className="otp-display mb-6">
+                            <div className="mb-2">
+                                <Shield className="h-6 w-6 mx-auto mb-2" />
+                                <div className="text-sm opacity-90">Development OTP</div>
+                            </div>
+                            <div className="otp-code">{otpInfo.otp}</div>
+                            <div className="text-xs mt-2 opacity-75">
+                                Expires: {new Date(otpInfo.expires_at).toLocaleTimeString()}
+                            </div>
+                        </div>
+                    )}
+                    
+                    <form className="space-y-6" onSubmit={handleOtpSubmit}>
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <GlassLabel htmlFor="otp" className="flex items-center gap-2 justify-center">
+                                    <Shield className="h-4 w-4" />
+                                    Verification Code
+                                </GlassLabel>
+                                <GlassInput
+                                    id="otp"
+                                    type="text"
+                                    inputMode="numeric"
+                                    pattern="[0-9]{6}"
+                                    maxLength={6}
+                                    minLength={6}
+                                    required
+                                    autoFocus
+                                    tabIndex={1}
+                                    value={otp}
+                                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                                    placeholder="000000"
+                                    disabled={processing}
+                                    className="text-center text-2xl tracking-[0.5em] font-mono"
+                                />
+                                <GlassInputError message={otpError || undefined} />
+                            </div>
+                            
+                            <GlassButton 
+                                type="submit" 
+                                className="w-full h-14 text-base font-semibold" 
+                                tabIndex={2} 
+                                disabled={processing || otp.length !== 6}
+                            >
+                                {processing ? (
+                                    <>
+                                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                                        Verifying...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Shield className="h-5 w-5" />
+                                        Verify & Login
+                                    </>
+                                )}
+                            </GlassButton>
+                        </div>
+                        
+                        <div className="text-center">
+                            <button 
+                                type="button" 
+                                className="glass-link text-sm font-medium flex items-center gap-2 mx-auto"
+                                onClick={() => setStep('mobile')}
+                            >
+                                <ArrowLeft className="h-4 w-4" />
+                                Change mobile number
+                            </button>
+                        </div>
+                    </form>
+                </>
+            )}
         </AuthLayout>
     );
 }

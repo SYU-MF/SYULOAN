@@ -1,3 +1,4 @@
+import React from 'react';
 import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
@@ -12,6 +13,7 @@ import AuthLayout from '@/layouts/auth-layout';
 type RegisterForm = {
     name: string;
     email: string;
+    mobile_number: string;
     password: string;
     password_confirmation: string;
 };
@@ -20,12 +22,41 @@ export default function Register() {
     const { data, setData, post, processing, errors, reset } = useForm<Required<RegisterForm>>({
         name: '',
         email: '',
+        mobile_number: '',
         password: '',
         password_confirmation: '',
     });
 
+    // Custom validation state
+    const [customErrors, setCustomErrors] = React.useState<{ name?: string; email?: string; mobile_number?: string }>({});
+
+    const validate = () => {
+        const errors: { name?: string; email?: string; mobile_number?: string } = {};
+        // Name: max 50, only letters and spaces
+        if (!/^([A-Za-z\s]{1,50})$/.test(data.name)) {
+            if (data.name.length > 50) {
+                errors.name = 'Name must not exceed 50 characters.';
+            } else {
+                errors.name = 'Name must only contain letters and spaces.';
+            }
+        }
+        // Email: valid, max 50
+        if (!/^.{1,50}$/.test(data.email)) {
+            errors.email = 'Email must not exceed 50 characters.';
+        } else if (!/^\S+@\S+\.\S+$/.test(data.email)) {
+            errors.email = 'Email must be a valid email address.';
+        }
+        // Mobile: exactly 11 digits, only numbers
+        if (!/^\d{11}$/.test(data.mobile_number)) {
+            errors.mobile_number = 'Mobile number must be exactly 11 digits.';
+        }
+        setCustomErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
     const submit: FormEventHandler = (e) => {
         e.preventDefault();
+        if (!validate()) return;
         post(route('register'), {
             onFinish: () => reset('password', 'password_confirmation'),
         });
@@ -49,9 +80,11 @@ export default function Register() {
                             onChange={(e) => setData('name', e.target.value)}
                             disabled={processing}
                             placeholder="Full name"
+                            maxLength={50}
                         />
-                        <InputError message={errors.name} className="mt-2" />
+                        <InputError message={customErrors.name || errors.name} className="mt-2" />
                     </div>
+
 
                     <div className="grid gap-2">
                         <Label htmlFor="email">Email address</Label>
@@ -65,8 +98,30 @@ export default function Register() {
                             onChange={(e) => setData('email', e.target.value)}
                             disabled={processing}
                             placeholder="email@example.com"
+                            maxLength={50}
                         />
-                        <InputError message={errors.email} />
+                        <InputError message={customErrors.email || errors.email} />
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="mobile_number">Mobile Number</Label>
+                        <Input
+                            id="mobile_number"
+                            type="tel"
+                            required
+                            tabIndex={3}
+                            autoComplete="tel"
+                            value={data.mobile_number}
+                            onChange={(e) => {
+                                // Only allow digits
+                                const value = e.target.value.replace(/\D/g, '');
+                                setData('mobile_number', value);
+                            }}
+                            disabled={processing}
+                            placeholder="e.g. 09171234567"
+                            maxLength={11}
+                        />
+                        <InputError message={customErrors.mobile_number || errors.mobile_number} />
                     </div>
 
                     <div className="grid gap-2">
@@ -75,7 +130,7 @@ export default function Register() {
                             id="password"
                             type="password"
                             required
-                            tabIndex={3}
+                            tabIndex={4}
                             autoComplete="new-password"
                             value={data.password}
                             onChange={(e) => setData('password', e.target.value)}
@@ -91,7 +146,7 @@ export default function Register() {
                             id="password_confirmation"
                             type="password"
                             required
-                            tabIndex={4}
+                            tabIndex={5}
                             autoComplete="new-password"
                             value={data.password_confirmation}
                             onChange={(e) => setData('password_confirmation', e.target.value)}
@@ -101,7 +156,7 @@ export default function Register() {
                         <InputError message={errors.password_confirmation} />
                     </div>
 
-                    <Button type="submit" className="mt-2 w-full" tabIndex={5} disabled={processing}>
+                    <Button type="submit" className="mt-2 w-full" tabIndex={6} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
                     </Button>
