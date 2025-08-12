@@ -1,4 +1,5 @@
 @import 'tailwindcss';
+@import 'datatables.net-dt/css/dataTables.dataTables.css';
 
 @plugin 'tailwindcss-animate';
 

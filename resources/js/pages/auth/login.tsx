@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import { LoaderCircle, Smartphone, Shield, ArrowLeft } from 'lucide-react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { LoaderCircle, Smartphone, Shield, ArrowLeft, CheckCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
 import GlassInputError from '@/components/glass-input-error';
@@ -7,6 +7,7 @@ import { GlassInput } from '@/components/ui/glass-input';
 import { GlassButton } from '@/components/ui/glass-button';
 import { GlassLabel } from '@/components/ui/glass-label';
 import AuthLayout from '@/layouts/auth-layout';
+import { SharedData } from '@/types';
 // Utility to get CSRF token from meta tag
 function getCsrfToken() {
     return (document.querySelector('meta[name="csrf-token"]') as HTMLMetaElement)?.content || '';
@@ -21,6 +22,13 @@ interface LoginProps {
     canResetPassword: boolean;
 }
 
+interface LoginPageProps extends SharedData {
+    flash?: {
+        success?: string;
+        error?: string;
+    };
+}
+
 
 import { useState } from 'react';
 import { router } from '@inertiajs/react';
@@ -32,6 +40,10 @@ export default function Login({ status, canResetPassword }: LoginProps) {
     const { data, setData, post, processing, errors, reset } = useForm<LoginForm>({
         mobile_number: '',
     });
+    
+    // Access flash messages
+    const page = usePage<LoginPageProps>();
+    const flashSuccess = page.props.flash?.success;
 
     const handleMobileSubmit: FormEventHandler = (e) => {
         e.preventDefault();
@@ -97,6 +109,16 @@ export default function Login({ status, canResetPassword }: LoginProps) {
             description={step === 'mobile' ? "Enter your mobile number to receive a secure OTP" : "Enter the 6-digit code sent to your phone"}
         >
             <Head title="Log in" />
+            
+            {/* Display success message from registration */}
+            {flashSuccess && (
+                <div className="mb-6 p-4 rounded-lg bg-green-500/10 border border-green-500/20 backdrop-blur-sm">
+                    <div className="flex items-center gap-3 text-green-400">
+                        <CheckCircle className="h-5 w-5 flex-shrink-0" />
+                        <p className="text-sm font-medium">{flashSuccess}</p>
+                    </div>
+                </div>
+            )}
             
             {step === 'mobile' && (
                 <form className="space-y-6" onSubmit={handleMobileSubmit}>

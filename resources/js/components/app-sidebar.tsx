@@ -4,7 +4,18 @@ import { NavUser } from '@/components/nav-user';
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
 import { type NavItem } from '@/types';
 import { Link } from '@inertiajs/react';
-import { BookOpen, Folder, LayoutGrid } from 'lucide-react';
+import { 
+    LayoutGrid, 
+    Users, 
+    CreditCard, 
+    BanknoteIcon, 
+    FileText, 
+    BarChart3, 
+    Settings, 
+    Calculator,
+    UserCheck,
+    AlertTriangle
+} from 'lucide-react';
 import AppLogo from './app-logo';
 
 const mainNavItems: NavItem[] = [
@@ -13,20 +24,49 @@ const mainNavItems: NavItem[] = [
         href: '/dashboard',
         icon: LayoutGrid,
     },
+    {
+        title: 'Borrowers',
+        href: '/borrowers',
+        icon: Users,
+    },
+    {
+        title: 'Loans',
+        href: '/loans',
+        icon: CreditCard,
+    },
+    {
+        title: 'Payments',
+        href: '/payments',
+        icon: BanknoteIcon,
+    },
+    {
+        title: 'Applications',
+        href: '/applications',
+        icon: FileText,
+    },
+    {
+        title: 'Reports',
+        href: '/reports',
+        icon: BarChart3,
+    },
+    {
+        title: 'Collections',
+        href: '/collections',
+        icon: AlertTriangle,
+    },
+    {
+        title: 'Calculator',
+        href: '/calculator',
+        icon: Calculator,
+    },
+    {
+        title: 'KYC Verification',
+        href: '/kyc',
+        icon: UserCheck,
+    },
 ];
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Repository',
-        href: 'https://github.com/laravel/react-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#react',
-        icon: BookOpen,
-    },
-];
+const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
     return (
