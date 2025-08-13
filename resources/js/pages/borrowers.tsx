@@ -21,14 +21,19 @@ import {
     List,
     TrendingUp,
     DollarSign,
-    UserCheck
+    UserCheck,
+    CheckCircle
 } from 'lucide-react';
 
 interface Borrower {
     id: number;
     borrower_id: string;
     first_name: string;
+    middle_name?: string;
     last_name: string;
+    gender?: string;
+    nationality?: string;
+    civil_status?: string;
     email: string;
     phone: string;
     date_of_birth: string;
@@ -93,11 +98,17 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [isSuccessAlertOpen, setIsSuccessAlertOpen] = useState(false);
     const [selectedBorrower, setSelectedBorrower] = useState<Borrower | null>(null);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         first_name: '',
+        middle_name: '',
         last_name: '',
+        gender: '',
+        nationality: '',
+        civil_status: '',
         email: '',
         phone: '',
         date_of_birth: '',
@@ -115,7 +126,11 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
         reset: resetEdit 
     } = useForm({
         first_name: '',
+        middle_name: '',
         last_name: '',
+        gender: '',
+        nationality: '',
+        civil_status: '',
         email: '',
         phone: '',
         date_of_birth: '',
@@ -202,7 +217,11 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
         setSelectedBorrower(borrower);
         setEditData({
             first_name: borrower.first_name,
+            middle_name: borrower.middle_name || '',
             last_name: borrower.last_name,
+            gender: borrower.gender || '',
+            nationality: borrower.nationality || '',
+            civil_status: borrower.civil_status || '',
             email: borrower.email,
             phone: borrower.phone,
             date_of_birth: borrower.date_of_birth,
@@ -229,11 +248,24 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
     };
 
     const handleConfirm = (borrower: Borrower) => {
-        confirmBorrower(route('borrowers.confirm', borrower.id), {
-            onSuccess: () => {
-                closeModals();
-            },
-        });
+        setSelectedBorrower(borrower);
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleConfirmConfirmed = () => {
+        if (selectedBorrower) {
+            confirmBorrower(route('borrowers.confirm', selectedBorrower.id), {
+                onSuccess: () => {
+                    setIsConfirmModalOpen(false);
+                    setIsSuccessAlertOpen(true);
+                    // Auto-hide success alert after 1 second
+                    setTimeout(() => {
+                        setIsSuccessAlertOpen(false);
+                        closeModals();
+                    }, 1000);
+                },
+            });
+        }
     };
 
     const handleDecline = (borrower: Borrower) => {
@@ -249,6 +281,8 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
         setIsEditModalOpen(false);
         setIsViewModalOpen(false);
         setIsDeleteModalOpen(false);
+        setIsConfirmModalOpen(false);
+        setIsSuccessAlertOpen(false);
         setSelectedBorrower(null);
         reset();
         resetEdit();
@@ -597,17 +631,76 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                             </div>
 
                                             <div>
-                                                <Label htmlFor="last_name" className="text-sm font-medium text-gray-700">Last Name</Label>
+                                                <Label htmlFor="middle_name" className="text-sm font-medium text-gray-700">Middle Name</Label>
                                                 <Input
-                                                    id="last_name"
+                                                    id="middle_name"
                                                     type="text"
-                                                    value={data.last_name}
-                                                    onChange={(e) => setData('last_name', e.target.value)}
+                                                    value={data.middle_name}
+                                                    onChange={(e) => setData('middle_name', e.target.value)}
                                                     className="mt-1"
-                                                    required
                                                 />
-                                                <InputError message={errors.last_name} />
+                                                <InputError message={errors.middle_name} />
                                             </div>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="last_name" className="text-sm font-medium text-gray-700">Last Name</Label>
+                                            <Input
+                                                id="last_name"
+                                                type="text"
+                                                value={data.last_name}
+                                                onChange={(e) => setData('last_name', e.target.value)}
+                                                className="mt-1"
+                                                required
+                                            />
+                                            <InputError message={errors.last_name} />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label htmlFor="gender" className="text-sm font-medium text-gray-700">Gender</Label>
+                                                <Select value={data.gender} onValueChange={(value) => setData('gender', value)}>
+                                                    <SelectTrigger className="mt-1">
+                                                        <SelectValue placeholder="Select gender" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Male">Male</SelectItem>
+                                                        <SelectItem value="Female">Female</SelectItem>
+                                                        <SelectItem value="Other">Other</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <InputError message={errors.gender} />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="nationality" className="text-sm font-medium text-gray-700">Nationality</Label>
+                                                <Input
+                                                    id="nationality"
+                                                    type="text"
+                                                    value={data.nationality}
+                                                    onChange={(e) => setData('nationality', e.target.value)}
+                                                    className="mt-1"
+                                                    placeholder="e.g., Filipino"
+                                                />
+                                                <InputError message={errors.nationality} />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="civil_status" className="text-sm font-medium text-gray-700">Civil Status</Label>
+                                            <Select value={data.civil_status} onValueChange={(value) => setData('civil_status', value)}>
+                                                <SelectTrigger className="mt-1">
+                                                    <SelectValue placeholder="Select civil status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Single">Single</SelectItem>
+                                                    <SelectItem value="Married">Married</SelectItem>
+                                                    <SelectItem value="Divorced">Divorced</SelectItem>
+                                                    <SelectItem value="Widowed">Widowed</SelectItem>
+                                                    <SelectItem value="Separated">Separated</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError message={errors.civil_status} />
                                         </div>
 
                                         <div>
@@ -754,12 +847,34 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                         <div className="space-y-3">
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500">Full Name</label>
-                                                <p className="text-gray-900">{selectedBorrower.first_name} {selectedBorrower.last_name}</p>
+                                                <p className="text-gray-900">
+                                                    {selectedBorrower.first_name} 
+                                                    {selectedBorrower.middle_name && ` ${selectedBorrower.middle_name}`} 
+                                                    {selectedBorrower.last_name}
+                                                </p>
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500">Borrower ID</label>
                                                 <p className="text-gray-900">{selectedBorrower.borrower_id}</p>
                                             </div>
+                                            {selectedBorrower.gender && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500">Gender</label>
+                                                    <p className="text-gray-900">{selectedBorrower.gender}</p>
+                                                </div>
+                                            )}
+                                            {selectedBorrower.nationality && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500">Nationality</label>
+                                                    <p className="text-gray-900">{selectedBorrower.nationality}</p>
+                                                </div>
+                                            )}
+                                            {selectedBorrower.civil_status && (
+                                                <div>
+                                                    <label className="text-sm font-medium text-gray-500">Civil Status</label>
+                                                    <p className="text-gray-900">{selectedBorrower.civil_status}</p>
+                                                </div>
+                                            )}
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500">Date of Birth</label>
                                                 <p className="text-gray-900">{selectedBorrower.date_of_birth}</p>
@@ -893,17 +1008,76 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                             </div>
 
                                             <div>
-                                                <Label htmlFor="edit_last_name" className="text-sm font-medium text-gray-700">Last Name</Label>
+                                                <Label htmlFor="edit_middle_name" className="text-sm font-medium text-gray-700">Middle Name</Label>
                                                 <Input
-                                                    id="edit_last_name"
+                                                    id="edit_middle_name"
                                                     type="text"
-                                                    value={editData.last_name}
-                                                    onChange={(e) => setEditData('last_name', e.target.value)}
+                                                    value={editData.middle_name}
+                                                    onChange={(e) => setEditData('middle_name', e.target.value)}
                                                     className="mt-1"
-                                                    required
                                                 />
-                                                <InputError message={editErrors.last_name} />
+                                                <InputError message={editErrors.middle_name} />
                                             </div>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="edit_last_name" className="text-sm font-medium text-gray-700">Last Name</Label>
+                                            <Input
+                                                id="edit_last_name"
+                                                type="text"
+                                                value={editData.last_name}
+                                                onChange={(e) => setEditData('last_name', e.target.value)}
+                                                className="mt-1"
+                                                required
+                                            />
+                                            <InputError message={editErrors.last_name} />
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                                                <Label htmlFor="edit_gender" className="text-sm font-medium text-gray-700">Gender</Label>
+                                                <Select value={editData.gender} onValueChange={(value) => setEditData('gender', value)}>
+                                                    <SelectTrigger className="mt-1">
+                                                        <SelectValue placeholder="Select gender" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="Male">Male</SelectItem>
+                                                        <SelectItem value="Female">Female</SelectItem>
+                                                        <SelectItem value="Other">Other</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <InputError message={editErrors.gender} />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="edit_nationality" className="text-sm font-medium text-gray-700">Nationality</Label>
+                                                <Input
+                                                    id="edit_nationality"
+                                                    type="text"
+                                                    value={editData.nationality}
+                                                    onChange={(e) => setEditData('nationality', e.target.value)}
+                                                    className="mt-1"
+                                                    placeholder="e.g., Filipino"
+                                                />
+                                                <InputError message={editErrors.nationality} />
+                                            </div>
+                                        </div>
+
+                                        <div>
+                                            <Label htmlFor="edit_civil_status" className="text-sm font-medium text-gray-700">Civil Status</Label>
+                                            <Select value={editData.civil_status} onValueChange={(value) => setEditData('civil_status', value)}>
+                                                <SelectTrigger className="mt-1">
+                                                    <SelectValue placeholder="Select civil status" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="Single">Single</SelectItem>
+                                                    <SelectItem value="Married">Married</SelectItem>
+                                                    <SelectItem value="Divorced">Divorced</SelectItem>
+                                                    <SelectItem value="Widowed">Widowed</SelectItem>
+                                                    <SelectItem value="Separated">Separated</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                            <InputError message={editErrors.civil_status} />
                                         </div>
 
                                         <div>
@@ -1049,6 +1223,60 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                         {deleteProcessing ? 'Deleting...' : 'Delete'}
                                     </Button>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Confirm Borrower Modal */}
+                {isConfirmModalOpen && selectedBorrower && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
+                            <div className="p-6">
+                                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
+                                    <UserCheck className="h-6 w-6 text-green-600" />
+                                </div>
+                                
+                                <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Confirm Borrower</h3>
+                                <p className="text-gray-600 text-center mb-6">
+                                    Are you sure you want to confirm <strong>{selectedBorrower.first_name} {selectedBorrower.last_name}</strong>? 
+                                    This will approve their borrower status.
+                                </p>
+
+                                <div className="flex justify-end space-x-4">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => setIsConfirmModalOpen(false)}
+                                        className="px-6"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button 
+                                        onClick={handleConfirmConfirmed}
+                                        disabled={confirmProcessing}
+                                        className="bg-green-600 hover:bg-green-700 text-white px-6"
+                                    >
+                                        {confirmProcessing ? 'Confirming...' : 'Confirm'}
+                                    </Button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success Alert Modal */}
+                {isSuccessAlertOpen && selectedBorrower && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                        <div className="w-full max-w-md mx-4 bg-white rounded-2xl shadow-2xl">
+                            <div className="p-6">
+                                <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-green-100 rounded-full">
+                                    <CheckCircle className="h-6 w-6 text-green-600" />
+                                </div>
+                                
+                                <h3 className="text-lg font-semibold text-gray-900 text-center mb-2">Success!</h3>
+                                <p className="text-gray-600 text-center">
+                                    <strong>{selectedBorrower.first_name} {selectedBorrower.last_name}</strong> has been confirmed successfully.
+                                </p>
                             </div>
                         </div>
                     </div>

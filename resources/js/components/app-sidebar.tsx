@@ -14,7 +14,8 @@ import {
     Settings, 
     Calculator,
     UserCheck,
-    AlertTriangle
+    AlertTriangle,
+    ClipboardList
 } from 'lucide-react';
 import AppLogo from './app-logo';
 
@@ -28,6 +29,11 @@ const mainNavItems: NavItem[] = [
         title: 'Borrowers',
         href: '/borrowers',
         icon: Users,
+    },
+    {
+        title: 'Requirements',
+        href: '/requirements',
+        icon: ClipboardList,
     },
     {
         title: 'Loans',

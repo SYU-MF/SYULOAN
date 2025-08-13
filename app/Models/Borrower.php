@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Borrower extends Model
 {
@@ -17,7 +18,11 @@ class Borrower extends Model
     protected $fillable = [
         'borrower_id',
         'first_name',
+        'middle_name',
         'last_name',
+        'gender',
+        'nationality',
+        'civil_status',
         'email',
         'phone',
         'address',
@@ -90,5 +95,13 @@ class Borrower extends Model
     public function decline()
     {
         $this->update(['status' => self::STATUS_DECLINED]);
+    }
+
+    /**
+     * Get the requirements for the borrower.
+     */
+    public function requirements(): HasMany
+    {
+        return $this->hasMany(Requirement::class);
     }
 }

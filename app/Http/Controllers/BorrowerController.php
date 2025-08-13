@@ -41,7 +41,11 @@ class BorrowerController extends Controller
     {
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
+            'gender' => 'nullable|in:Male,Female,Other',
+            'nationality' => 'nullable|string|max:255',
+            'civil_status' => 'nullable|in:Single,Married,Divorced,Widowed,Separated',
             'email' => 'required|email|unique:borrowers,email',
             'phone' => 'required|string|max:20',
             'address' => 'required|string',
@@ -83,7 +87,11 @@ class BorrowerController extends Controller
     {
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
             'last_name' => 'required|string|max:255',
+            'gender' => 'nullable|in:Male,Female,Other',
+            'nationality' => 'nullable|string|max:255',
+            'civil_status' => 'nullable|in:Single,Married,Divorced,Widowed,Separated',
             'email' => 'required|email|unique:borrowers,email,' . $borrower->id,
             'phone' => 'required|string|max:20',
             'address' => 'required|string',
