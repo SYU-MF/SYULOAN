@@ -28,6 +28,52 @@ class RequirementController extends Controller
      */
     public function store(Request $request)
     {
+        // Handle multiple file uploads
+        if ($request->has('files')) {
+            $request->validate([
+                'borrower_id' => 'required|exists:borrowers,id',
+                'files' => 'required|array',
+                'files.*' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
+                'notes' => 'nullable|string|max:1000',
+            ]);
+
+            $borrower = Borrower::findOrFail($request->borrower_id);
+            $uploadedCount = 0;
+
+            foreach ($request->file('files') as $documentType => $file) {
+                // Validate document type
+                if (!array_key_exists($documentType, Requirement::DOCUMENT_TYPES)) {
+                    continue;
+                }
+
+                // Create directory structure: requirements/{borrower_id}/{document_type}/
+                $directory = "requirements/{$borrower->borrower_id}/{$documentType}";
+                
+                // Generate unique filename
+                $filename = time() . '_' . $file->getClientOriginalName();
+                
+                // Store the file
+                $filePath = $file->storeAs($directory, $filename, 'public');
+                
+                // Create requirement record
+                Requirement::create([
+                    'borrower_id' => $request->borrower_id,
+                    'document_type' => $documentType,
+                    'file_name' => $file->getClientOriginalName(),
+                    'file_path' => $filePath,
+                    'file_size' => $file->getSize(),
+                    'mime_type' => $file->getMimeType(),
+                    'notes' => $request->notes,
+                ]);
+
+                $uploadedCount++;
+            }
+
+            return redirect()->back()
+                ->with('success', "{$uploadedCount} document(s) uploaded successfully!");
+        }
+
+        // Handle single file upload (existing functionality)
         $request->validate([
             'borrower_id' => 'required|exists:borrowers,id',
             'document_type' => 'required|in:' . implode(',', array_keys(Requirement::DOCUMENT_TYPES)),
@@ -136,6 +182,24 @@ class RequirementController extends Controller
     }
 
     /**
+     * View/display the requirement file (for images).
+     */
+    public function view(Requirement $requirement)
+    {
+        if (!Storage::disk('public')->exists($requirement->file_path)) {
+            abort(404, 'File not found.');
+        }
+
+        $filePath = storage_path('app/public/' . $requirement->file_path);
+        $mimeType = $requirement->mime_type;
+
+        return response()->file($filePath, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'inline; filename="' . $requirement->file_name . '"'
+        ]);
+    }
+
+    /**
      * Download the requirement file.
      */
     public function download(Requirement $requirement)
@@ -145,7 +209,6 @@ class RequirementController extends Controller
         }
 
         return response()->download(storage_path('app/public/' . $requirement->file_path),
-            $requirement->file_path,
             $requirement->file_name
         );
     }

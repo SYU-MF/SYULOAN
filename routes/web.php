@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     
     Route::resource('requirements', RequirementController::class);
     Route::get('requirements/borrower/{borrower}', [RequirementController::class, 'show'])->name('requirements.show');
+    Route::get('requirements/{requirement}/view', [RequirementController::class, 'view'])->name('requirements.view');
     Route::get('requirements/{requirement}/download', [RequirementController::class, 'download'])->name('requirements.download');
 });
 

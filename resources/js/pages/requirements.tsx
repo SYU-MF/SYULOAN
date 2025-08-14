@@ -77,6 +77,7 @@ const getStatusText = (status: number) => {
 
 export default function Requirements({ borrowers, documentTypes }: RequirementsPageProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedBorrowerId, setSelectedBorrowerId] = useState<string>('');
     const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({
         government_id: null,
         proof_of_billing: null,
@@ -96,6 +97,14 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
             ...prev,
             [documentType]: file
         }));
+    };
+
+    const handleOpenModal = (borrowerId?: string) => {
+        if (borrowerId) {
+            setSelectedBorrowerId(borrowerId);
+            setData('borrower_id', borrowerId);
+        }
+        setIsModalOpen(true);
     };
 
     const handleSubmitRequirements = async (e: React.FormEvent) => {
@@ -139,6 +148,7 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
 
         // Reset form and close modal
         setIsModalOpen(false);
+        setSelectedBorrowerId('');
         reset();
         setSelectedFiles({
             government_id: null,
@@ -167,36 +177,30 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                 <h1 className="text-3xl font-bold text-gray-900">Requirements</h1>
                                 <p className="text-gray-600 mt-1">Manage borrower document requirements</p>
                             </div>
-                            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg">
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Collect Requirements
-                                    </Button>
-                                </DialogTrigger>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Modal for collecting requirements */}
+                <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
                                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                                     <DialogHeader>
                                         <DialogTitle>Collect Requirements</DialogTitle>
                                     </DialogHeader>
                                     
                                     <form onSubmit={handleSubmitRequirements} className="space-y-6">
-                                        {/* Borrower Selection */}
-                                        <div className="space-y-2">
-                                            <Label htmlFor="borrower_id">Select Borrower *</Label>
-                                            <Select value={data.borrower_id} onValueChange={(value) => setData('borrower_id', value)}>
-                                                <SelectTrigger>
-                                                    <SelectValue placeholder="Choose a confirmed borrower" />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    {confirmedBorrowers.map((borrower) => (
-                                                        <SelectItem key={borrower.id} value={borrower.id.toString()}>
-                                                            {borrower.borrower_id} - {borrower.first_name} {borrower.last_name}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <InputError message={errors.borrower_id} />
-                                        </div>
+                                        {/* Selected Borrower Display */}
+                                        {selectedBorrowerId && (
+                                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                                                <p className="text-sm text-blue-800">
+                                                    <span className="font-medium">Collecting requirements for:</span>
+                                                    {(() => {
+                                                        const borrower = confirmedBorrowers.find(b => b.id.toString() === selectedBorrowerId);
+                                                        return borrower ? ` ${borrower.borrower_id} - ${borrower.first_name} ${borrower.last_name}` : ' Selected Borrower';
+                                                    })()}
+                                                </p>
+                                            </div>
+                                        )}
 
                                         {/* File Upload Sections */}
                                         <div className="space-y-4">
@@ -278,10 +282,7 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                         </div>
                                     </form>
                                 </DialogContent>
-                            </Dialog>
-                        </div>
-                    </div>
-                </div>
+                </Dialog>
 
                 {/* Borrowers with Requirements */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -296,9 +297,11 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                             </CardTitle>
                                             <p className="text-sm text-gray-600">{borrower.borrower_id}</p>
                                         </div>
-                                        <Badge className={getStatusColor(borrower.status)}>
-                                            {getStatusText(borrower.status)}
-                                        </Badge>
+                                        {borrower.requirements.length === Object.keys(documentTypes).length && (
+                                            <Badge className="bg-green-50 text-green-700 border-green-200">
+                                                Completed
+                                            </Badge>
+                                        )}
                                     </div>
                                 </CardHeader>
                                 <CardContent>
@@ -311,32 +314,25 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                         </div>
                                         
                                         {borrower.requirements.length > 0 ? (
-                                            <div className="space-y-2">
-                                                {borrower.requirements.slice(0, 3).map((req) => (
-                                                    <div key={req.id} className="flex items-center space-x-2 text-sm">
-                                                        <FileText className="h-4 w-4 text-blue-600" />
-                                                        <span className="truncate">{req.document_type_text}</span>
-                                                    </div>
-                                                ))}
-                                                {borrower.requirements.length > 3 && (
-                                                    <p className="text-xs text-gray-500">
-                                                        +{borrower.requirements.length - 3} more...
-                                                    </p>
-                                                )}
+                                            <div className="flex items-center space-x-2 text-sm">
+                                                <FileText className="h-4 w-4 text-blue-600" />                 
+                                                <span className="text-gray-600">Documents uploaded</span>
                                             </div>
                                         ) : (
                                             <p className="text-sm text-gray-500 italic">No requirements uploaded yet</p>
                                         )}
                                         
-                                        <Button
-                                            onClick={() => handleViewBorrowerRequirements(borrower)}
-                                            variant="outline"
-                                            size="sm"
-                                            className="w-full mt-3"
-                                        >
-                                            <FolderOpen className="h-4 w-4 mr-2" />
-                                            View Requirements
-                                        </Button>
+                                        <div className="mt-3">
+                                            <Button
+                                                onClick={() => handleViewBorrowerRequirements(borrower)}
+                                                variant="outline"
+                                                size="sm"
+                                                className="w-full"
+                                            >
+                                                <FolderOpen className="h-4 w-4 mr-2" />
+                                                View Requirements
+                                            </Button>
+                                        </div>
                                     </div>
                                 </CardContent>
                             </Card>
