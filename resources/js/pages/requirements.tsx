@@ -78,6 +78,7 @@ const getStatusText = (status: number) => {
 export default function Requirements({ borrowers, documentTypes }: RequirementsPageProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBorrowerId, setSelectedBorrowerId] = useState<string>('');
+    const [activeTab, setActiveTab] = useState<'no-requirements' | 'partial' | 'completed'>('no-requirements');
     const [selectedFiles, setSelectedFiles] = useState<Record<string, File | null>>({
         government_id: null,
         proof_of_billing: null,
@@ -164,18 +165,45 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
 
     const confirmedBorrowers = borrowers.filter(b => b.status === 2);
 
+    // Helper function to categorize borrowers based on requirement completion
+    const categorizeBorrowers = () => {
+        const totalRequiredDocs = Object.keys(documentTypes).length;
+        
+        const noRequirements = confirmedBorrowers.filter(b => {
+            const basicRequirements = b.requirements.filter(req => documentTypes.hasOwnProperty(req.document_type));
+            return basicRequirements.length === 0;
+        });
+        const partialRequirements = confirmedBorrowers.filter(b => {
+            const basicRequirements = b.requirements.filter(req => documentTypes.hasOwnProperty(req.document_type));
+            return basicRequirements.length > 0 && basicRequirements.length < totalRequiredDocs;
+        });
+        const completedRequirements = confirmedBorrowers.filter(b => {
+            const basicRequirements = b.requirements.filter(req => documentTypes.hasOwnProperty(req.document_type));
+            return basicRequirements.length === totalRequiredDocs;
+        });
+
+        return {
+            'no-requirements': noRequirements,
+            'partial': partialRequirements,
+            'completed': completedRequirements
+        };
+    };
+
+    const categorizedBorrowers = categorizeBorrowers();
+    const currentBorrowers = categorizedBorrowers[activeTab];
+
     return (
         <AppLayout>
             <Head title="Requirements" />
             
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
                 {/* Header Section */}
-                <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
                     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                             <div>
-                                <h1 className="text-3xl font-bold text-gray-900">Requirements</h1>
-                                <p className="text-gray-600 mt-1">Manage borrower document requirements</p>
+                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Requirements</h1>
+                                <p className="text-gray-600 dark:text-gray-300 mt-1">Manage borrower document requirements</p>
                             </div>
                         </div>
                     </div>
@@ -183,16 +211,16 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
 
                 {/* Modal for collecting requirements */}
                 <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-                                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                                     <DialogHeader>
-                                        <DialogTitle>Collect Requirements</DialogTitle>
+                                        <DialogTitle className="text-gray-900 dark:text-white">Collect Requirements</DialogTitle>
                                     </DialogHeader>
                                     
                                     <form onSubmit={handleSubmitRequirements} className="space-y-6">
                                         {/* Selected Borrower Display */}
                                         {selectedBorrowerId && (
-                                            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
-                                                <p className="text-sm text-blue-800">
+                                            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-md">
+                                                <p className="text-sm text-blue-800 dark:text-blue-300">
                                                     <span className="font-medium">Collecting requirements for:</span>
                                                     {(() => {
                                                         const borrower = confirmedBorrowers.find(b => b.id.toString() === selectedBorrowerId);
@@ -204,11 +232,11 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
 
                                         {/* File Upload Sections */}
                                         <div className="space-y-4">
-                                            <h3 className="text-lg font-semibold">Upload Requirements</h3>
+                                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Upload Requirements</h3>
                                             
                                             {Object.entries(documentTypes).map(([key, label]) => (
-                                                <div key={key} className="border rounded-lg p-4 space-y-2">
-                                                    <Label className="text-sm font-medium">{label}</Label>
+                                                <div key={key} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-2 bg-gray-50 dark:bg-gray-700/50">
+                                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</Label>
                                                     <Input
                                                         type="file"
                                                         accept=".pdf,.jpg,.jpeg,.png"
@@ -216,7 +244,7 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                                         className="file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                                     />
                                                     {selectedFiles[key] && (
-                                                        <p className="text-sm text-green-600">
+                                                        <p className="text-sm text-green-600 dark:text-green-400">
                                                             Selected: {selectedFiles[key]?.name}
                                                         </p>
                                                     )}
@@ -226,12 +254,12 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
 
                                         {/* Notes */}
                                         <div className="space-y-2">
-                                            <Label htmlFor="notes">Notes (Optional)</Label>
+                                            <Label htmlFor="notes" className="text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
                                             <textarea
                                                 id="notes"
                                                 value={data.notes}
                                                 onChange={(e) => setData('notes', e.target.value)}
-                                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
                                                 rows={3}
                                                 placeholder="Additional notes about the requirements..."
                                             />
@@ -239,10 +267,10 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                         </div>
 
                                         {/* Important Notes */}
-                                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                                        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
                                             <div className="flex items-start space-x-2">
-                                                <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5" />
-                                                <div className="text-sm text-amber-800">
+                                                <AlertCircle className="h-5 w-5 text-amber-600 dark:text-amber-400 mt-0.5" />
+                                                <div className="text-sm text-amber-800 dark:text-amber-300">
                                                     <p className="font-semibold mb-2">Important Notes:</p>
                                                     <ul className="list-disc list-inside space-y-1">
                                                         <li>Additional documents may be requested depending on the financing type.</li>
@@ -284,22 +312,75 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                 </DialogContent>
                 </Dialog>
 
-                {/* Borrowers with Requirements */}
+                {/* Tabbed Requirements Section */}
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                    {/* Tab Navigation */}
+                    <div className="mb-6">
+                        <div className="border-b border-gray-200 dark:border-gray-700">
+                            <nav className="-mb-px flex space-x-8">
+                                <button
+                                    onClick={() => setActiveTab('no-requirements')}
+                                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                                        activeTab === 'no-requirements'
+                                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                    }`}
+                                >
+                                    No Requirements
+                                    <Badge className="ml-2 bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-400">
+                                        {categorizedBorrowers['no-requirements'].length}
+                                    </Badge>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('partial')}
+                                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                                        activeTab === 'partial'
+                                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                    }`}
+                                >
+                                    Partial Requirements
+                                    <Badge className="ml-2 bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400">
+                                        {categorizedBorrowers['partial'].length}
+                                    </Badge>
+                                </button>
+                                <button
+                                    onClick={() => setActiveTab('completed')}
+                                    className={`py-2 px-1 border-b-2 font-medium text-sm transition-colors duration-200 ${
+                                        activeTab === 'completed'
+                                            ? 'border-blue-500 text-blue-600 dark:text-blue-400'
+                                            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300'
+                                    }`}
+                                >
+                                    Completed Requirements
+                                    <Badge className="ml-2 bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400">
+                                        {categorizedBorrowers['completed'].length}
+                                    </Badge>
+                                </button>
+                            </nav>
+                        </div>
+                    </div>
+
+                    {/* Tab Content */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {borrowers.filter(borrower => borrower.status === 2).map((borrower) => (
-                            <Card key={borrower.id} className="hover:shadow-lg transition-shadow duration-200">
+                        {currentBorrowers.map((borrower) => (
+                            <Card key={borrower.id} className="hover:shadow-lg transition-shadow duration-200 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                                 <CardHeader className="pb-3">
                                     <div className="flex items-center justify-between">
                                         <div>
-                                            <CardTitle className="text-lg">
+                                            <CardTitle className="text-lg text-gray-900 dark:text-white">
                                                 {borrower.first_name} {borrower.last_name}
                                             </CardTitle>
-                                            <p className="text-sm text-gray-600">{borrower.borrower_id}</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">{borrower.borrower_id}</p>
                                         </div>
-                                        {borrower.requirements.length === Object.keys(documentTypes).length && (
-                                            <Badge className="bg-green-50 text-green-700 border-green-200">
+                                        {activeTab === 'completed' && (
+                                            <Badge className="bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800">
                                                 Completed
+                                            </Badge>
+                                        )}
+                                        {activeTab === 'partial' && (
+                                            <Badge className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800">
+                                                {Math.round((borrower.requirements.filter(req => documentTypes.hasOwnProperty(req.document_type)).length / Object.keys(documentTypes).length) * 100)}% Complete
                                             </Badge>
                                         )}
                                     </div>
@@ -307,19 +388,19 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                                 <CardContent>
                                     <div className="space-y-3">
                                         <div className="flex items-center justify-between text-sm">
-                                            <span className="text-gray-600">Requirements:</span>
-                                            <span className="font-semibold">
-                                                {borrower.requirements.length} / {Object.keys(documentTypes).length}
+                                            <span className="text-gray-600 dark:text-gray-400">Requirements:</span>
+                                            <span className="font-semibold text-gray-900 dark:text-white">
+                                                {borrower.requirements.filter(req => documentTypes.hasOwnProperty(req.document_type)).length} / {Object.keys(documentTypes).length}
                                             </span>
                                         </div>
                                         
-                                        {borrower.requirements.length > 0 ? (
+                                        {borrower.requirements.filter(req => documentTypes.hasOwnProperty(req.document_type)).length > 0 ? (
                                             <div className="flex items-center space-x-2 text-sm">
-                                                <FileText className="h-4 w-4 text-blue-600" />                 
-                                                <span className="text-gray-600">Documents uploaded</span>
+                                                <FileText className="h-4 w-4 text-blue-600 dark:text-blue-400" />                 
+                                                <span className="text-gray-600 dark:text-gray-400">Documents uploaded</span>
                                             </div>
                                         ) : (
-                                            <p className="text-sm text-gray-500 italic">No requirements uploaded yet</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 italic">No requirements uploaded yet</p>
                                         )}
                                         
                                         <div className="mt-3">
@@ -339,11 +420,29 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                         ))}
                     </div>
                     
-                    {borrowers.filter(borrower => borrower.status === 2).length === 0 && (
+                    {/* Empty State */}
+                    {currentBorrowers.length === 0 && (
                         <div className="text-center py-12">
-                            <FolderOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                            <h3 className="text-lg font-semibold text-gray-900 mb-2">No Confirmed Borrowers Found</h3>
-                            <p className="text-gray-600">Only confirmed borrowers will appear here. Please confirm borrowers first to manage their requirements.</p>
+                            <FolderOpen className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                                {activeTab === 'no-requirements' && 'No Borrowers Without Requirements'}
+                                {activeTab === 'partial' && 'No Borrowers With Partial Requirements'}
+                                {activeTab === 'completed' && 'No Borrowers With Completed Requirements'}
+                            </h3>
+                            <p className="text-gray-600 dark:text-gray-400">
+                                {activeTab === 'no-requirements' && 'All confirmed borrowers have started uploading their requirements.'}
+                                {activeTab === 'partial' && 'No borrowers currently have partial requirements uploaded.'}
+                                {activeTab === 'completed' && 'No borrowers have completed all their requirements yet.'}
+                            </p>
+                        </div>
+                    )}
+                    
+                    {/* No Confirmed Borrowers State */}
+                    {confirmedBorrowers.length === 0 && (
+                        <div className="text-center py-12">
+                            <FolderOpen className="h-12 w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No Confirmed Borrowers Found</h3>
+                            <p className="text-gray-600 dark:text-gray-400">Only confirmed borrowers will appear here. Please confirm borrowers first to manage their requirements.</p>
                         </div>
                     )}
                 </div>

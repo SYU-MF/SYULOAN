@@ -35,14 +35,24 @@ class RequirementController extends Controller
                 'files' => 'required|array',
                 'files.*' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB max
                 'notes' => 'nullable|string|max:1000',
+                'extra_requirements' => 'nullable|string', // JSON string of extra requirements
             ]);
 
             $borrower = Borrower::findOrFail($request->borrower_id);
             $uploadedCount = 0;
+            
+            // Parse extra requirements if provided
+            $extraRequirements = [];
+            if ($request->has('extra_requirements') && !empty($request->extra_requirements)) {
+                $extraRequirements = json_decode($request->extra_requirements, true) ?? [];
+            }
 
             foreach ($request->file('files') as $documentType => $file) {
-                // Validate document type
-                if (!array_key_exists($documentType, Requirement::DOCUMENT_TYPES)) {
+                // Check if it's a predefined document type or an extra requirement
+                $isValidType = array_key_exists($documentType, Requirement::DOCUMENT_TYPES) || 
+                              array_key_exists($documentType, $extraRequirements);
+                
+                if (!$isValidType) {
                     continue;
                 }
 
@@ -55,6 +65,9 @@ class RequirementController extends Controller
                 // Store the file
                 $filePath = $file->storeAs($directory, $filename, 'public');
                 
+                // Get notes for this specific file
+                $fileNotes = $request->input("file_notes.{$documentType}", $request->notes);
+                
                 // Create requirement record
                 Requirement::create([
                     'borrower_id' => $request->borrower_id,
@@ -63,7 +76,7 @@ class RequirementController extends Controller
                     'file_path' => $filePath,
                     'file_size' => $file->getSize(),
                     'mime_type' => $file->getMimeType(),
-                    'notes' => $request->notes,
+                    'notes' => $fileNotes,
                 ]);
 
                 $uploadedCount++;

@@ -41,7 +41,24 @@ class Requirement extends Model
      */
     public function getDocumentTypeTextAttribute(): string
     {
-        return self::DOCUMENT_TYPES[$this->document_type] ?? $this->document_type;
+        // Check if it's a predefined document type
+        if (array_key_exists($this->document_type, self::DOCUMENT_TYPES)) {
+            return self::DOCUMENT_TYPES[$this->document_type];
+        }
+        
+        // For extra requirements, try to extract the name from notes
+        if (str_starts_with($this->document_type, 'extra_') && $this->notes) {
+            if (str_starts_with($this->notes, 'Extra Requirement: ')) {
+                return str_replace('Extra Requirement: ', '', $this->notes);
+            }
+        }
+        
+        // Fallback: format the key to be more readable
+        if (str_starts_with($this->document_type, 'extra_')) {
+            return ucwords(str_replace(['extra_', '_'], ['', ' '], $this->document_type));
+        }
+        
+        return $this->document_type;
     }
 
     /**
