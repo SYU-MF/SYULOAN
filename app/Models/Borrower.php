@@ -104,4 +104,12 @@ class Borrower extends Model
     {
         return $this->hasMany(Requirement::class);
     }
+
+    /**
+     * Get the loans for the borrower.
+     */
+    public function loans(): HasMany
+    {
+        return $this->hasMany(Loan::class);
+    }
 }

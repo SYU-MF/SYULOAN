@@ -1,0 +1,225 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Payment;
+use App\Models\Loan;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Inertia\Inertia;
+use Carbon\Carbon;
+
+class PaymentController extends Controller
+{
+    /**
+     * Display a listing of the resource.
+     */
+    public function index()
+    {
+        $payments = Payment::with(['loan.borrower', 'processedBy'])
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        $activeLoans = Loan::with('borrower')
+            ->where('status', Loan::STATUS_ACTIVE)
+            ->get();
+
+        // Calculate payment statistics
+        $statistics = [
+            'totalPayments' => $payments->count(),
+            'totalAmount' => $payments->where('status', Payment::STATUS_COMPLETED)->sum('amount'),
+            'pendingPayments' => $payments->where('status', Payment::STATUS_PENDING)->count(),
+            'completedPayments' => $payments->where('status', Payment::STATUS_COMPLETED)->count(),
+            'monthlyCollection' => $payments->where('status', Payment::STATUS_COMPLETED)
+                ->where('payment_date', '>=', Carbon::now()->startOfMonth())
+                ->sum('amount'),
+        ];
+
+        return Inertia::render('payments', [
+            'payments' => $payments,
+            'activeLoans' => $activeLoans,
+            'statistics' => $statistics,
+        ]);
+    }
+
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(Request $request)
+    {
+        $request->validate([
+            'loan_id' => 'required|exists:loans,id',
+            'amount' => 'required|numeric|min:0.01',
+            'payment_date' => 'required|date',
+            'payment_type' => 'required|in:regular,partial,full,penalty,advance',
+            'payment_method' => 'required|in:cash,bank_transfer,check,online,gcash,paymaya',
+            'reference_number' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        $loan = Loan::findOrFail($request->loan_id);
+        
+        // Calculate payment breakdown
+        $paymentBreakdown = $this->calculatePaymentBreakdown($loan, $request->amount, $request->payment_type);
+
+        DB::transaction(function () use ($request, $loan, $paymentBreakdown) {
+            $payment = Payment::create([
+                'loan_id' => $request->loan_id,
+                'amount' => $request->amount,
+                'payment_date' => $request->payment_date,
+                'payment_type' => $request->payment_type,
+                'payment_method' => $request->payment_method,
+                'status' => Payment::STATUS_COMPLETED,
+                'principal_amount' => $paymentBreakdown['principal'],
+                'interest_amount' => $paymentBreakdown['interest'],
+                'penalty_amount' => $paymentBreakdown['penalty'],
+                'remaining_balance' => $paymentBreakdown['remaining_balance'],
+                'reference_number' => $request->reference_number,
+                'notes' => $request->notes,
+                'processed_by' => Auth::id(),
+                'processed_at' => now(),
+            ]);
+
+            // Update loan status if fully paid
+            if ($paymentBreakdown['remaining_balance'] <= 0) {
+                $loan->update(['status' => Loan::STATUS_COMPLETED]);
+            }
+        });
+
+        return redirect()->route('payments.index')
+            ->with('success', 'Payment recorded successfully.');
+    }
+
+    /**
+     * Display the specified resource.
+     */
+    public function show(Payment $payment)
+    {
+        $payment->load(['loan.borrower', 'processedBy']);
+        
+        return Inertia::render('payments/show', [
+            'payment' => $payment,
+        ]);
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(Request $request, Payment $payment)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,completed,failed,cancelled',
+            'notes' => 'nullable|string',
+        ]);
+
+        $payment->update([
+            'status' => $request->status,
+            'notes' => $request->notes,
+            'processed_by' => Auth::id(),
+            'processed_at' => now(),
+        ]);
+
+        return redirect()->route('payments.index')
+            ->with('success', 'Payment updated successfully.');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Payment $payment)
+    {
+        // Only allow deletion of pending payments
+        if ($payment->status !== Payment::STATUS_PENDING) {
+            return redirect()->route('payments.index')
+                ->with('error', 'Only pending payments can be deleted.');
+        }
+
+        $payment->delete();
+
+        return redirect()->route('payments.index')
+            ->with('success', 'Payment deleted successfully.');
+    }
+
+    /**
+     * Get payment history for a specific loan.
+     */
+    public function loanPayments(Loan $loan)
+    {
+        $payments = $loan->payments()
+            ->with('processedBy')
+            ->orderBy('payment_date', 'desc')
+            ->get();
+
+        $totalPaid = $payments->where('status', Payment::STATUS_COMPLETED)->sum('amount');
+        $remainingBalance = $loan->total_amount - $totalPaid;
+
+        return Inertia::render('payments/loan-payments', [
+            'loan' => $loan->load('borrower'),
+            'payments' => $payments,
+            'totalPaid' => $totalPaid,
+            'remainingBalance' => $remainingBalance,
+        ]);
+    }
+
+    /**
+     * Calculate payment breakdown (principal, interest, penalty).
+     */
+    private function calculatePaymentBreakdown(Loan $loan, float $amount, string $paymentType): array
+    {
+        $totalPaid = $loan->payments()->where('status', Payment::STATUS_COMPLETED)->sum('amount');
+        $remainingBalance = $loan->total_amount - $totalPaid;
+        
+        // Calculate precise interest and principal breakdown
+        $totalInterest = $loan->total_amount - $loan->principal_amount;
+        
+        // Use precise decimal calculation for monthly interest
+        $monthlyInterest = round($totalInterest / $loan->loan_duration, 2);
+        
+        // For simple interest loans, interest portion is fixed per month
+        $interestPortion = min($monthlyInterest, $amount, $remainingBalance);
+        
+        // Remaining amount goes to principal - ensure precision
+        $principalPortion = round($amount - $interestPortion, 2);
+        
+        // Ensure we don't exceed remaining balance
+        if (($interestPortion + $principalPortion) > $remainingBalance) {
+            $principalPortion = round($remainingBalance - $interestPortion, 2);
+        }
+        
+        // Calculate penalty for late payments (can be enhanced)
+        $penalty = 0;
+        
+        $newRemainingBalance = round(max(0, $remainingBalance - $amount), 2);
+        
+        return [
+            'principal' => $principalPortion,
+            'interest' => $interestPortion,
+            'penalty' => $penalty,
+            'remaining_balance' => $newRemainingBalance,
+        ];
+    }
+
+    /**
+     * Generate payment schedule for a loan.
+     */
+    public function generateSchedule(Loan $loan)
+    {
+        $schedule = [];
+        $startDate = Carbon::parse($loan->loan_release_date);
+        $monthlyPayment = $loan->monthly_payment;
+        
+        for ($i = 1; $i <= $loan->loan_duration; $i++) {
+            $dueDate = $startDate->copy()->addMonths($i);
+            $schedule[] = [
+                'payment_number' => $i,
+                'due_date' => $dueDate->format('Y-m-d'),
+                'amount' => $monthlyPayment,
+                'principal' => $monthlyPayment * 0.7, // Simplified calculation
+                'interest' => $monthlyPayment * 0.3,
+            ];
+        }
+        
+        return response()->json($schedule);
+    }
+}

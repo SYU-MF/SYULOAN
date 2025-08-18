@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\BorrowerController;
+use App\Http\Controllers\LoanController;
+use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RequirementController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -23,6 +25,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('requirements/borrower/{borrower}', [RequirementController::class, 'show'])->name('requirements.show');
     Route::get('requirements/{requirement}/view', [RequirementController::class, 'view'])->name('requirements.view');
     Route::get('requirements/{requirement}/download', [RequirementController::class, 'download'])->name('requirements.download');
+    
+    Route::resource('loans', LoanController::class);
+    Route::patch('loans/{loan}/approve', [LoanController::class, 'approve'])->name('loans.approve');
+    Route::patch('loans/{loan}/activate', [LoanController::class, 'activate'])->name('loans.activate');
+    
+    Route::resource('payments', PaymentController::class);
+    Route::get('payments/loan/{loan}', [PaymentController::class, 'loanPayments'])->name('payments.loan');
+    Route::get('loans/{loan}/schedule', [PaymentController::class, 'generateSchedule'])->name('loans.schedule');
 });
 
 require __DIR__.'/settings.php';

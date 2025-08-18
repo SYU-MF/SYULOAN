@@ -65,6 +65,22 @@ const formatCurrency = (amount: number) => {
     }).format(amount);
 };
 
+const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+};
+
+const formatFullName = (firstName: string, middleName?: string, lastName?: string) => {
+    const parts = [firstName];
+    if (middleName) parts.push(middleName);
+    if (lastName) parts.push(lastName);
+    return parts.join(' ');
+};
+
 const getStatusText = (status: number) => {
     switch (status) {
         case 1:
@@ -846,9 +862,7 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Full Name</label>
                                                 <p className="text-gray-900 dark:text-white">
-                                                    {selectedBorrower.first_name} 
-                                                    {selectedBorrower.middle_name && ` ${selectedBorrower.middle_name}`} 
-                                                    {selectedBorrower.last_name}
+                                                    {formatFullName(selectedBorrower.first_name, selectedBorrower.middle_name, selectedBorrower.last_name)}
                                                 </p>
                                             </div>
                                             <div>
@@ -875,7 +889,7 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                             )}
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Date of Birth</label>
-                                                <p className="text-gray-900 dark:text-white">{selectedBorrower.date_of_birth}</p>
+                                                <p className="text-gray-900 dark:text-white">{formatDate(selectedBorrower.date_of_birth)}</p>
                                             </div>
                                             <div>
                                                 <label className="text-sm font-medium text-gray-500 dark:text-gray-400">Address</label>
