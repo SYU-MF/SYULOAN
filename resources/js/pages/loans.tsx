@@ -195,7 +195,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
         <AppLayout>
             <Head title="Loans Management" />
             
-            <div className="space-y-6">
+            <div className="space-y-6 p-4 md:p-6 lg:p-8">
                 {/* Header */}
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                     <div>

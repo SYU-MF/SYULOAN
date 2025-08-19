@@ -44,7 +44,8 @@ import {
     Receipt,
     Banknote,
     FileText,
-    Download
+    Download,
+    RefreshCw
 } from 'lucide-react';
 
 interface Borrower {
@@ -168,6 +169,13 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
 
+    // Function to generate reference number
+    const generateReferenceNumber = () => {
+        const timestamp = Date.now().toString();
+        const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+        return `REF-${timestamp.slice(-8)}-${random}`;
+    };
+
     const { data, setData, post, processing, errors, reset } = useForm({
         loan_id: '',
         amount: '',
@@ -204,141 +212,341 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
         });
     };
 
+    const handleCloseModal = () => {
+        reset();
+        setIsAddModalOpen(false);
+    };
+
     const handleViewPayment = (payment: Payment) => {
         setSelectedPayment(payment);
         setIsViewModalOpen(true);
     };
 
-    const downloadReceipt = (payment: Payment) => {
+    const handleOpenAddModal = () => {
+        const newRefNumber = generateReferenceNumber();
+        setData('reference_number', newRefNumber);
+        setIsAddModalOpen(true);
+    };
+
+    const downloadReceipt = async (payment: Payment) => {
         const doc = new jsPDF();
         const pageWidth = doc.internal.pageSize.getWidth();
         const pageHeight = doc.internal.pageSize.getHeight();
         
-        // Colors
-        const primaryColor = [34, 197, 94]; // Green
-        const secondaryColor = [75, 85, 99]; // Gray
-        const lightGray = [243, 244, 246];
+        // Function to load logo image
+        const loadLogo = (): Promise<string | null> => {
+            return new Promise((resolve) => {
+                const logoImg = new Image();
+                logoImg.crossOrigin = 'anonymous';
+                logoImg.onload = function() {
+                    try {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        if (!ctx) {
+                            resolve(null);
+                            return;
+                        }
+                        canvas.width = logoImg.width;
+                        canvas.height = logoImg.height;
+                        ctx.drawImage(logoImg, 0, 0);
+                        const logoDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                        resolve(logoDataUrl);
+                    } catch (e) {
+                        console.log('Error processing logo:', e);
+                        resolve(null);
+                    }
+                };
+                logoImg.onerror = () => {
+                    console.log('Logo failed to load');
+                    resolve(null);
+                };
+                logoImg.src = '/img/logo.jpg';
+                
+                // Timeout after 3 seconds
+                setTimeout(() => {
+                    resolve(null);
+                }, 3000);
+            });
+        };
         
-        // Header Background
-doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.rect(0, 0, pageWidth, 40, 'F');
+        // Load logo
+        const logoDataUrl = await loadLogo();
         
-        // Company Logo/Title
+        // Modern black and gold color palette
+        const primaryColor = [0, 0, 0]; // Black
+        const accentColor = [255, 215, 0]; // Gold
+        const darkGray = [31, 41, 55]; // Dark gray
+        const lightGray = [249, 250, 251]; // Very light gray
+        const borderColor = [229, 231, 235]; // Light border
+        
+        // Header with black and gold gradient effect
+        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.rect(0, 0, pageWidth, 50, 'F');
+        
+        // Add gold accent stripe
+        doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+        doc.rect(0, 45, pageWidth, 5, 'F');
+        
+        // Add company logo
+        if (logoDataUrl) {
+            try {
+                // Add the actual logo image
+                doc.addImage(logoDataUrl, 'JPEG', 15, 15, 20, 20);
+            } catch (e) {
+                console.log('Error adding logo to PDF:', e);
+                // Fallback to styled placeholder
+                doc.setFillColor(255, 255, 255);
+                doc.circle(25, 25, 12, 'F');
+                doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+                doc.setLineWidth(2);
+                doc.circle(25, 25, 12, 'S');
+                doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+                doc.setFontSize(6);
+                doc.setFont('helvetica', 'bold');
+                doc.text('SYU', 25, 27, { align: 'center' });
+            }
+        } else {
+            // Enhanced fallback design when logo couldn't be loaded
+            doc.setFillColor(255, 255, 255);
+            doc.circle(25, 25, 12, 'F');
+            doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+            doc.setLineWidth(2);
+            doc.circle(25, 25, 12, 'S');
+            doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+            doc.setFontSize(6);
+            doc.setFont('helvetica', 'bold');
+            doc.text('SYU', 25, 27, { align: 'center' });
+        }
+        
+        // Company name and tagline
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
+        doc.setFontSize(28);
         doc.setFont('helvetica', 'bold');
-        doc.text('SYU LOAN', 20, 25);
+        doc.text('SYU LOAN', 45, 25);
         
-        doc.setFontSize(12);
+        doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
-        doc.text('Payment Receipt', 20, 32);
+        doc.text('Financial Services & Lending Solutions', 45, 33);
         
-        // Receipt Info (Top Right)
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(10);
-        doc.text(`Receipt #: ${payment.payment_id}`, pageWidth - 20, 20, { align: 'right' });
-        doc.text(`Date: ${new Date(payment.payment_date).toLocaleDateString()}`, pageWidth - 20, 27, { align: 'right' });
-        doc.text(`Status: ${payment.status.toUpperCase()}`, pageWidth - 20, 34, { align: 'right' });
+        // Receipt title and info (Top Right)
+        doc.setFontSize(16);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAYMENT RECEIPT', pageWidth - 20, 20, { align: 'right' });
+        
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Receipt #: ${payment.payment_id}`, pageWidth - 20, 28, { align: 'right' });
+        doc.text(`Date: ${new Date(payment.payment_date).toLocaleDateString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        })}`, pageWidth - 20, 35, { align: 'right' });
+        
+        // Status badge with gold background
+        const statusText = payment.status.toUpperCase();
+        doc.setFillColor(accentColor[0], accentColor[1], accentColor[2]);
+        doc.roundedRect(pageWidth - 60, 38, 40, 8, 2, 2, 'F');
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'bold');
+        doc.text(statusText, pageWidth - 40, 43, { align: 'center' });
         
         // Reset text color for body
-        doc.setTextColor(0, 0, 0);
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
         
         // Borrower Information Section
-        let yPos = 60;
-doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-        doc.rect(20, yPos - 5, pageWidth - 40, 25, 'F');
+        let yPos = 65;
         
-        doc.setFontSize(14);
+        // Section header with modern styling
+        doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+        doc.roundedRect(20, yPos, pageWidth - 40, 30, 3, 3, 'F');
+        
+        // Add subtle border
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(20, yPos, pageWidth - 40, 30, 3, 3, 'S');
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.text('BORROWER INFORMATION', 25, yPos + 5);
+        doc.text('BORROWER INFORMATION', 25, yPos + 10);
         
-        doc.setFontSize(11);
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        yPos += 15;
-        doc.text(`Name: ${payment.loan.borrower.first_name} ${payment.loan.borrower.middle_name || ''} ${payment.loan.borrower.last_name}`, 25, yPos);
-        yPos += 7;
-        doc.text(`Borrower ID: ${payment.loan.borrower.borrower_id}`, 25, yPos);
-        doc.text(`Loan ID: ${payment.loan.loan_id}`, pageWidth - 25, yPos, { align: 'right' });
+        
+        const borrowerName = `${payment.loan.borrower.first_name} ${payment.loan.borrower.middle_name ? payment.loan.borrower.middle_name + ' ' : ''}${payment.loan.borrower.last_name}`;
+        doc.text(`Name: ${borrowerName}`, 25, yPos + 18);
+        doc.text(`Borrower ID: ${payment.loan.borrower.borrower_id}`, 25, yPos + 24);
+        doc.text(`Email: ${payment.loan.borrower.email}`, pageWidth / 2 + 10, yPos + 18);
+        doc.text(`Phone: ${payment.loan.borrower.phone}`, pageWidth / 2 + 10, yPos + 24);
+        
+        // Loan Information Section
+        yPos += 40;
+        doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
+        doc.roundedRect(20, yPos, pageWidth - 40, 30, 3, 3, 'F');
+        
+        // Add subtle border
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.roundedRect(20, yPos, pageWidth - 40, 30, 3, 3, 'S');
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('LOAN INFORMATION', 25, yPos + 10);
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        doc.text(`Loan ID: ${payment.loan.loan_id}`, 25, yPos + 18);
+        doc.text(`Principal: ${formatCurrency(payment.loan.principal_amount)}`, 25, yPos + 24);
+        doc.text(`Interest Rate: ${payment.loan.interest_rate}%`, pageWidth / 2 + 10, yPos + 18);
+        doc.text(`Duration: ${payment.loan.loan_duration} months`, pageWidth / 2 + 10, yPos + 24);
         
         // Payment Details Section
-        yPos += 20;
+        yPos += 50;
         doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
-        doc.rect(20, yPos - 5, pageWidth - 40, 25, 'F');
+        doc.roundedRect(20, yPos, pageWidth - 40, 30, 3, 3, 'F');
         
-        doc.setFontSize(14);
+        // Add subtle border
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.5);
+        doc.roundedRect(20, yPos, pageWidth - 40, 30, 3, 3, 'S');
+        
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(12);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.text('PAYMENT DETAILS', 25, yPos + 5);
+        doc.text('PAYMENT DETAILS', 25, yPos + 10);
         
-        doc.setFontSize(11);
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+        doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
-        doc.setTextColor(0, 0, 0);
-        yPos += 20;
         
-        // Payment breakdown table
+        doc.text(`Payment Date: ${new Date(payment.payment_date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`, 25, yPos + 18);
+        doc.text(`Payment Type: ${payment.payment_type.charAt(0).toUpperCase() + payment.payment_type.slice(1)}`, 25, yPos + 24);
+        doc.text(`Payment Method: ${payment.payment_method.replace('_', ' ').toUpperCase()}`, pageWidth / 2 + 10, yPos + 18);
+        if (payment.reference_number) {
+            doc.text(`Reference: ${payment.reference_number}`, pageWidth / 2 + 10, yPos + 24);
+        }
+        
+        // Payment breakdown table with modern styling
+        yPos += 45;
         const tableData = [
-            ['Payment Type:', payment.payment_type.charAt(0).toUpperCase() + payment.payment_type.slice(1)],
-            ['Payment Method:', payment.payment_method.replace('_', ' ').toUpperCase()],
             ['Principal Amount:', formatCurrency(payment.principal_amount)],
             ['Interest Amount:', formatCurrency(payment.interest_amount)],
             ['Penalty Amount:', formatCurrency(payment.penalty_amount)],
-            ['Total Payment:', formatCurrency(payment.amount)],
             ['Remaining Balance:', formatCurrency(payment.remaining_balance)]
         ];
         
-        if (payment.reference_number) {
-            tableData.splice(2, 0, ['Reference Number:', payment.reference_number]);
-        }
-        
-        tableData.forEach(([label, value]) => {
-            doc.text(label, 25, yPos);
-            doc.setFont('helvetica', 'bold');
-            doc.text(value, pageWidth - 25, yPos, { align: 'right' });
+        // Create alternating row colors for better readability
+        tableData.forEach(([label, value], index) => {
+            if (index % 2 === 0) {
+                doc.setFillColor(248, 250, 252); // Very light gray
+                doc.rect(20, yPos - 3, pageWidth - 40, 10, 'F');
+            }
+            
+            doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
             doc.setFont('helvetica', 'normal');
-            yPos += 8;
+            doc.text(label, 25, yPos + 2);
+            doc.setFont('helvetica', 'bold');
+            doc.text(value, pageWidth - 25, yPos + 2, { align: 'right' });
+            yPos += 10;
         });
         
-        // Total Amount Highlight
-        yPos += 5;
-        doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
-        doc.rect(20, yPos - 5, pageWidth - 40, 15, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'bold');
-        doc.text('TOTAL PAID:', 25, yPos + 5);
-        doc.text(formatCurrency(payment.amount), pageWidth - 25, yPos + 5, { align: 'right' });
+        // Total Amount Highlight with black and gold styling
+         yPos += 10;
+         
+         // Black background with gold border
+         doc.setFillColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+         doc.roundedRect(20, yPos, pageWidth - 40, 20, 5, 5, 'F');
+         
+         // Gold border
+         doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+         doc.setLineWidth(2);
+         doc.roundedRect(20, yPos, pageWidth - 40, 20, 5, 5, 'S');
+         
+         doc.setTextColor(accentColor[0], accentColor[1], accentColor[2]);
+         doc.setFontSize(16);
+         doc.setFont('helvetica', 'bold');
+         doc.text('TOTAL PAID:', 25, yPos + 12);
+         doc.setFontSize(18);
+         doc.text(formatCurrency(payment.amount), pageWidth - 25, yPos + 12, { align: 'right' });
         
-        // Notes Section (if exists)
+        // Notes Section (if exists) with modern styling
         if (payment.notes) {
-            yPos += 25;
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(12);
-            doc.setFont('helvetica', 'bold');
-            doc.text('Notes:', 25, yPos);
+            yPos += 30;
             
-            doc.setFontSize(10);
+            // Notes section background
+            doc.setFillColor(252, 252, 253); // Very light background
+            doc.roundedRect(20, yPos, pageWidth - 40, 25, 3, 3, 'F');
+            
+            // Add border
+            doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+            doc.setLineWidth(0.5);
+            doc.roundedRect(20, yPos, pageWidth - 40, 25, 3, 3, 'S');
+            
+            doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
+            doc.setFontSize(11);
+            doc.setFont('helvetica', 'bold');
+            doc.text('NOTES:', 25, yPos + 8);
+            
+            doc.setFontSize(9);
             doc.setFont('helvetica', 'normal');
             const splitNotes = doc.splitTextToSize(payment.notes, pageWidth - 50);
-            doc.text(splitNotes, 25, yPos + 8);
-            yPos += splitNotes.length * 5 + 8;
+            doc.text(splitNotes, 25, yPos + 15);
+            yPos += Math.max(25, splitNotes.length * 4 + 15);
         }
         
-        // Footer
-        const footerY = pageHeight - 30;
-        doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
-        doc.line(20, footerY - 10, pageWidth - 20, footerY - 10);
+        // Modern Footer with enhanced styling
+        const footerY = pageHeight - 40;
         
-        doc.setTextColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        // Footer background
+        doc.setFillColor(249, 250, 251);
+        doc.rect(0, footerY - 15, pageWidth, 55, 'F');
+        
+        // Decorative line with gold accent
+         doc.setDrawColor(accentColor[0], accentColor[1], accentColor[2]);
+         doc.setLineWidth(2);
+         doc.line(20, footerY - 10, pageWidth - 20, footerY - 10);
+        
+        // Secondary line
+        doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+        doc.setLineWidth(0.5);
+        doc.line(20, footerY - 8, pageWidth - 20, footerY - 8);
+        
+        // Footer text with better typography
+        doc.setTextColor(darkGray[0], darkGray[1], darkGray[2]);
         doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text('SYU LOAN MANAGEMENT SYSTEM', pageWidth / 2, footerY, { align: 'center' });
+        
         doc.setFont('helvetica', 'normal');
-        doc.text('This is an official payment receipt generated by SYU Loan Management System.', pageWidth / 2, footerY, { align: 'center' });
-        doc.text(`Generated on: ${new Date().toLocaleString()}`, pageWidth / 2, footerY + 5, { align: 'center' });
+        doc.setFontSize(8);
+        doc.text('This is an official payment receipt. Please keep this for your records.', pageWidth / 2, footerY + 6, { align: 'center' });
+        
+        doc.setTextColor(100, 116, 139); // Lighter gray
+        doc.text(`Generated on: ${new Date().toLocaleString('en-US', { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric', 
+            hour: '2-digit', 
+            minute: '2-digit' 
+        })}`, pageWidth / 2, footerY + 12, { align: 'center' });
         
         if (payment.processed_by) {
-            doc.text(`Processed by: ${payment.processed_by.name}`, pageWidth / 2, footerY + 10, { align: 'center' });
+            doc.text(`Processed by: ${payment.processed_by.name}`, pageWidth / 2, footerY + 18, { align: 'center' });
         }
+        
+        // Add a subtle watermark
+        doc.setTextColor(240, 240, 240);
+        doc.setFontSize(60);
+        doc.setFont('helvetica', 'bold');
+        doc.text('PAID', pageWidth / 2, pageHeight / 2, { 
+            align: 'center', 
+            angle: -45,
+            renderingMode: 'stroke'
+        });
         
         // Save the PDF
         doc.save(`Payment_Receipt_${payment.payment_id}.pdf`);
@@ -348,34 +556,21 @@ doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
         <AppLayout>
             <Head title="Payments" />
             
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="space-y-6 p-4 md:p-6 lg:p-8">
                 {/* Header */}
-                <div className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center space-x-3">
-                                <div className="bg-gradient-to-r from-green-500 to-emerald-600 p-3 rounded-xl">
-                                    <Banknote className="h-8 w-8 text-white" />
-                                </div>
-                                <div>
-                                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Payments</h1>
-                                    <p className="text-gray-600 dark:text-gray-300 mt-1">Manage borrower payments and collections</p>
-                                </div>
-                            </div>
-                            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white">
-                                        <Plus className="h-4 w-4 mr-2" />
-                                        Record Payment
-                                    </Button>
-                                </DialogTrigger>
-                            </Dialog>
-                        </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Payments</h1>
+                        <p className="text-gray-600 dark:text-gray-300 mt-1">Manage borrower payments and collections</p>
                     </div>
+                    <Button 
+                        onClick={handleOpenAddModal}
+                        className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Record Payment
+                    </Button>
                 </div>
-
-                {/* Content */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
                     {/* Statistics Cards */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-6">
                         <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-lg">
@@ -615,7 +810,7 @@ doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
                                 </p>
                                 {!searchTerm && statusFilter === 'all' && typeFilter === 'all' && (
                                     <Button 
-                                        onClick={() => setIsAddModalOpen(true)}
+                                        onClick={handleOpenAddModal}
                                         className="bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white"
                                     >
                                         <Plus className="h-4 w-4 mr-2" />
@@ -626,10 +821,9 @@ doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
                         </Card>
                     )}
                 </div>
-            </div>
 
             {/* Add Payment Modal */}
-            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+            <Dialog open={isAddModalOpen} onOpenChange={handleCloseModal}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="text-2xl font-bold text-gray-900 dark:text-white">Record Payment</DialogTitle>
@@ -716,15 +910,30 @@ doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
                             </div>
 
                             <div>
-                                <Label htmlFor="reference_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Reference Number</Label>
-                                <Input
-                                    id="reference_number"
-                                    type="text"
-                                    value={data.reference_number}
-                                    onChange={(e) => setData('reference_number', e.target.value)}
-                                    className="mt-1"
-                                    placeholder="Optional"
-                                />
+                                <Label htmlFor="reference_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Reference Number
+                                    <span className="text-xs text-green-600 dark:text-green-400 ml-2"></span>
+                                </Label>
+                                <div className="flex gap-2 mt-1">
+                                    <Input
+                                        id="reference_number"
+                                        type="text"
+                                        value={data.reference_number}
+                                        onChange={(e) => setData('reference_number', e.target.value)}
+                                        className="flex-1"
+                                        placeholder="Auto-generated reference number"
+                                    />
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setData('reference_number', generateReferenceNumber())}
+                                        className="px-3"
+                                        title="Generate new reference number"
+                                    >
+                                        <RefreshCw className="h-4 w-4" />
+                                    </Button>
+                                </div>
                                 <InputError message={errors.reference_number} />
                             </div>
                         </div>
@@ -746,7 +955,7 @@ doc.setFillColor(lightGray[0], lightGray[1], lightGray[2]);
                             <Button
                                 type="button"
                                 variant="outline"
-                                onClick={() => setIsAddModalOpen(false)}
+                                onClick={handleCloseModal}
                             >
                                 Cancel
                             </Button>

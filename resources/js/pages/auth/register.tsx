@@ -3,11 +3,11 @@ import { Head, useForm } from '@inertiajs/react';
 import { LoaderCircle } from 'lucide-react';
 import { FormEventHandler } from 'react';
 
-import InputError from '@/components/input-error';
+import GlassInputError from '@/components/glass-input-error';
 import TextLink from '@/components/text-link';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { GlassButton } from '@/components/ui/glass-button';
+import { GlassInput } from '@/components/ui/glass-input';
+import { GlassLabel } from '@/components/ui/glass-label';
 import AuthLayout from '@/layouts/auth-layout';
 
 type RegisterForm = {
@@ -65,11 +65,11 @@ export default function Register() {
     return (
         <AuthLayout title="Create an account" description="Enter your details below to create your account">
             <Head title="Register" />
-            <form className="flex flex-col gap-6" onSubmit={submit}>
-                <div className="grid gap-6">
-                    <div className="grid gap-2">
-                        <Label htmlFor="name">Name</Label>
-                        <Input
+            <form className="space-y-6" onSubmit={submit}>
+                <div className="space-y-4">
+                    <div className="space-y-2">
+                        <GlassLabel htmlFor="name">Name</GlassLabel>
+                        <GlassInput
                             id="name"
                             type="text"
                             required
@@ -82,13 +82,13 @@ export default function Register() {
                             placeholder="Full name"
                             maxLength={50}
                         />
-                        <InputError message={customErrors.name || errors.name} className="mt-2" />
+                        <GlassInputError message={customErrors.name || errors.name} />
                     </div>
 
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="email">Email address</Label>
-                        <Input
+                    <div className="space-y-2">
+                        <GlassLabel htmlFor="email">Email address</GlassLabel>
+                        <GlassInput
                             id="email"
                             type="email"
                             required
@@ -100,12 +100,12 @@ export default function Register() {
                             placeholder="email@example.com"
                             maxLength={50}
                         />
-                        <InputError message={customErrors.email || errors.email} />
+                        <GlassInputError message={customErrors.email || errors.email} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="mobile_number">Mobile Number</Label>
-                        <Input
+                    <div className="space-y-2">
+                        <GlassLabel htmlFor="mobile_number">Mobile Number</GlassLabel>
+                        <GlassInput
                             id="mobile_number"
                             type="tel"
                             required
@@ -121,12 +121,12 @@ export default function Register() {
                             placeholder="e.g. 09171234567"
                             maxLength={11}
                         />
-                        <InputError message={customErrors.mobile_number || errors.mobile_number} />
+                        <GlassInputError message={customErrors.mobile_number || errors.mobile_number} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="password">Password</Label>
-                        <Input
+                    <div className="space-y-2">
+                        <GlassLabel htmlFor="password">Password</GlassLabel>
+                        <GlassInput
                             id="password"
                             type="password"
                             required
@@ -137,12 +137,12 @@ export default function Register() {
                             disabled={processing}
                             placeholder="Password"
                         />
-                        <InputError message={errors.password} />
+                        <GlassInputError message={errors.password} />
                     </div>
 
-                    <div className="grid gap-2">
-                        <Label htmlFor="password_confirmation">Confirm password</Label>
-                        <Input
+                    <div className="space-y-2">
+                        <GlassLabel htmlFor="password_confirmation">Confirm password</GlassLabel>
+                        <GlassInput
                             id="password_confirmation"
                             type="password"
                             required
@@ -153,13 +153,13 @@ export default function Register() {
                             disabled={processing}
                             placeholder="Confirm password"
                         />
-                        <InputError message={errors.password_confirmation} />
+                        <GlassInputError message={errors.password_confirmation} />
                     </div>
 
-                    <Button type="submit" className="mt-2 w-full" tabIndex={6} disabled={processing}>
+                    <GlassButton type="submit" className="w-full" tabIndex={6} disabled={processing}>
                         {processing && <LoaderCircle className="h-4 w-4 animate-spin" />}
                         Create account
-                    </Button>
+                    </GlassButton>
                 </div>
 
                 <div className="text-center text-sm text-muted-foreground">

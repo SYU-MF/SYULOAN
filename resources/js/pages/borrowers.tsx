@@ -306,29 +306,24 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
         <AppLayout>
             <Head title="Borrowers" />
             
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-                {/* Header Section */}
-                <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Borrowers</h1>
-                                <p className="text-gray-600 dark:text-gray-300 mt-1">Manage and track all borrower information</p>
-                            </div>
-                            <Button 
-                                onClick={() => setIsModalOpen(true)}
-                                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
-                            >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add New Borrower
-                            </Button>
-                        </div>
+            <div className="space-y-6 p-4 md:p-6 lg:p-8">
+                {/* Header */}
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Borrowers</h1>
+                        <p className="text-gray-600 dark:text-gray-300 mt-1">Manage and track all borrower information</p>
                     </div>
+                    <Button 
+                        onClick={() => setIsModalOpen(true)}
+                        className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
+                    >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Add New Borrower
+                    </Button>
                 </div>
 
                 {/* Statistics Cards */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         <Card className="bg-gradient-to-r from-blue-500 to-blue-600 text-white border-0 shadow-lg">
                             <CardContent className="p-6">
                                 <div className="flex items-center justify-between">
@@ -364,37 +359,37 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                                 </div>
                             </CardContent>
                         </Card>
-                    </div>
+                </div>
 
-                    {/* Search and Filter Bar */}
-                    <Card className="mb-6 shadow-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
-                        <CardContent className="p-6">
-                            <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-                                <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                                    <div className="relative flex-1 max-w-md">
-                                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
-                                        <Input
-                                            type="text"
-                                            placeholder="Search borrowers..."
-                                            value={searchTerm}
-                                            onChange={(e) => setSearchTerm(e.target.value)}
-                                            className="pl-10 border-gray-300 dark:border-gray-600 focus:border-blue-500 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                                        />
-                                    </div>
-                                    
-                                    <Select value={statusFilter} onValueChange={setStatusFilter}>
-                                        <SelectTrigger className="w-full sm:w-48 border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-900 dark:text-white">
-                                            <Filter className="h-4 w-4 mr-2" />
-                                            <SelectValue placeholder="Filter by status" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="all">All Status</SelectItem>
-                                            <SelectItem value="pending">Pending</SelectItem>
-                                            <SelectItem value="confirmed">Confirmed</SelectItem>
-                                            <SelectItem value="declined">Declined</SelectItem>
-                                        </SelectContent>
-                                    </Select>
+                {/* Search and Filter Bar */}
+                <Card className="shadow-sm border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                    <CardContent className="p-6">
+                        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                            <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                                <div className="relative flex-1 max-w-md">
+                                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                                    <Input
+                                        type="text"
+                                        placeholder="Search borrowers..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="pl-10 bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                                    />
                                 </div>
+                                
+                                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                                    <SelectTrigger className="w-full sm:w-48">
+                                        <Filter className="h-4 w-4 mr-2" />
+                                        <SelectValue placeholder="Filter by status" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">All Status</SelectItem>
+                                        <SelectItem value="pending">Pending</SelectItem>
+                                        <SelectItem value="confirmed">Confirmed</SelectItem>
+                                        <SelectItem value="declined">Declined</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                                 <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                                     <Button
@@ -1293,7 +1288,6 @@ export default function Borrowers({ borrowers }: BorrowersPageProps) {
                         </div>
                     </div>
                 )}
-            </div>
         </AppLayout>
     );
 }

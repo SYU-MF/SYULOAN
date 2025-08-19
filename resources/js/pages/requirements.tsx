@@ -196,16 +196,12 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
         <AppLayout>
             <Head title="Requirements" />
             
-            <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
+            <div className="space-y-6 p-4 md:p-6 lg:p-8">
                 {/* Header Section */}
-                <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                            <div>
-                                <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Requirements</h1>
-                                <p className="text-gray-600 dark:text-gray-300 mt-1">Manage borrower document requirements</p>
-                            </div>
-                        </div>
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Requirements</h1>
+                        <p className="text-gray-600 dark:text-gray-300 mt-1">Manage borrower document requirements</p>
                     </div>
                 </div>
 
@@ -313,7 +309,7 @@ export default function Requirements({ borrowers, documentTypes }: RequirementsP
                 </Dialog>
 
                 {/* Tabbed Requirements Section */}
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+                <div>
                     {/* Tab Navigation */}
                     <div className="mb-6">
                         <div className="border-b border-gray-200 dark:border-gray-700">
