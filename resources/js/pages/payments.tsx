@@ -23,6 +23,106 @@ export const Textarea = ({ className, ...props }: TextareaProps) => {
     />
   );
 };
+
+// Calculate remaining balance for a loan
+const calculateRemainingBalance = (loan: Loan, payments: Payment[]): number => {
+    const totalPaid = payments
+        .filter(payment => payment.loan.id === loan.id && payment.status === 'completed')
+        .reduce((sum, payment) => sum + payment.amount, 0);
+    return Math.max(0, loan.total_amount - totalPaid);
+};
+
+// Calculate penalty for overdue loans
+const calculatePenalty = (loan: Loan): { penalty: number; daysOverdue: number; isOverdue: boolean } => {
+    const loanReleaseDate = new Date(loan.loan_release_date);
+    const currentDate = new Date();
+    
+    // If no penalties configured, return no penalty
+    if (!loan.penalties || loan.penalties.length === 0) {
+        return { penalty: 0, daysOverdue: 0, isOverdue: false };
+    }
+    
+    // Calculate the next payment due date (first payment is one month after release)
+    const nextPaymentDate = new Date(loanReleaseDate);
+    nextPaymentDate.setMonth(loanReleaseDate.getMonth() + 1);
+    
+    // If the first payment hasn't come due yet, no penalty
+    if (currentDate < nextPaymentDate) {
+        return { penalty: 0, daysOverdue: 0, isOverdue: false };
+    }
+    
+    // Find the most recent payment due date that has passed
+    let lastDueDate = new Date(nextPaymentDate);
+    while (lastDueDate <= currentDate) {
+        const nextDue = new Date(lastDueDate);
+        nextDue.setMonth(lastDueDate.getMonth() + 1);
+        if (nextDue <= currentDate) {
+            lastDueDate = nextDue;
+        } else {
+            break;
+        }
+    }
+    
+    let totalPenalty = 0;
+    let maxDaysOverdue = 0;
+    let isOverdue = false;
+    
+    // Calculate penalty for each penalty configuration
+    for (const penaltyConfig of loan.penalties) {
+        // Skip if penalty type is 'none'
+        if (penaltyConfig.penalty_type === 'none') {
+            continue;
+        }
+        
+        // Calculate days overdue (with configurable grace period)
+        const gracePeriodDays = penaltyConfig.grace_period_days || 7;
+        const graceEndDate = new Date(lastDueDate);
+        graceEndDate.setDate(lastDueDate.getDate() + gracePeriodDays);
+        
+        const timeDiff = currentDate.getTime() - graceEndDate.getTime();
+        const daysOverdue = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+        
+        if (daysOverdue <= 0) {
+            continue; // No penalty if within grace period
+        }
+        
+        isOverdue = true;
+        maxDaysOverdue = Math.max(maxDaysOverdue, daysOverdue);
+        
+        // Calculate penalty based on configuration
+        const monthsOverdue = Math.max(1, Math.ceil(daysOverdue / 30));
+        let penalty = 0;
+        
+        if (penaltyConfig.penalty_type === 'percentage') {
+            // Get base amount for percentage calculation
+            let baseAmount = 0;
+            switch (penaltyConfig.penalty_calculation_base) {
+                case 'monthly_payment':
+                    baseAmount = loan.monthly_payment;
+                    break;
+                case 'principal_amount':
+                    baseAmount = loan.principal_amount;
+                    break;
+                case 'remaining_balance':
+                    // For simplicity, using principal amount as remaining balance
+                    // In a real system, you'd calculate actual remaining balance
+                    baseAmount = loan.principal_amount;
+                    break;
+                default:
+                    baseAmount = loan.monthly_payment;
+            }
+            
+            const penaltyRate = (penaltyConfig.penalty_rate || 2) / 100;
+            penalty = Math.round(baseAmount * penaltyRate * monthsOverdue * 100) / 100;
+        } else if (penaltyConfig.penalty_type === 'fixed') {
+            penalty = (penaltyConfig.penalty_rate || 0) * monthsOverdue;
+        }
+        
+        totalPenalty += penalty;
+    }
+    
+    return { penalty: totalPenalty, daysOverdue: maxDaysOverdue, isOverdue };
+};
 import InputError from '@/components/input-error';
 import { 
     Search, 
@@ -58,6 +158,17 @@ interface Borrower {
     phone: string;
 }
 
+interface LoanPenalty {
+    id: number;
+    loan_id: number;
+    penalty_type: string;
+    penalty_rate: number;
+    grace_period_days: number;
+    penalty_calculation_base: string;
+    penalty_name: string;
+    description?: string;
+}
+
 interface Loan {
     id: number;
     loan_id: string;
@@ -69,6 +180,7 @@ interface Loan {
     interest_rate: number;
     status: number;
     loan_release_date: string;
+    penalties?: LoanPenalty[];
 }
 
 interface Payment {
@@ -168,6 +280,8 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [selectedPayment, setSelectedPayment] = useState<Payment | null>(null);
     const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+    const [selectedLoan, setSelectedLoan] = useState<Loan | null>(null);
+    const [penaltyInfo, setPenaltyInfo] = useState<{ penalty: number; daysOverdue: number; isOverdue: boolean } | null>(null);
 
     // Function to generate reference number
     const generateReferenceNumber = () => {
@@ -215,6 +329,21 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
     const handleCloseModal = () => {
         reset();
         setIsAddModalOpen(false);
+        setSelectedLoan(null);
+        setPenaltyInfo(null);
+    };
+
+    const handleLoanSelection = (loanId: string) => {
+        setData('loan_id', loanId);
+        const loan = activeLoans.find(l => l.id.toString() === loanId);
+        if (loan) {
+            setSelectedLoan(loan);
+            const penalty = calculatePenalty(loan);
+            setPenaltyInfo(penalty);
+        } else {
+            setSelectedLoan(null);
+            setPenaltyInfo(null);
+        }
     };
 
     const handleViewPayment = (payment: Payment) => {
@@ -830,9 +959,9 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                     </DialogHeader>
                     <form onSubmit={handleSubmit} className="space-y-6">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
+                            <div className="md:col-span-2">
                                 <Label htmlFor="loan_id" className="text-sm font-medium text-gray-700 dark:text-gray-300">Loan</Label>
-                                <Select value={data.loan_id} onValueChange={(value) => setData('loan_id', value)}>
+                                <Select value={data.loan_id} onValueChange={handleLoanSelection}>
                                     <SelectTrigger className="mt-1">
                                         <SelectValue placeholder="Select a loan" />
                                     </SelectTrigger>
@@ -845,6 +974,50 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                     </SelectContent>
                                 </Select>
                                 <InputError message={errors.loan_id} />
+                                
+                                {/* Penalty Information Display */}
+                                {selectedLoan && penaltyInfo && (
+                                    <div className="mt-4 p-4 rounded-lg border">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">Loan Information</h4>
+                                            {penaltyInfo.isOverdue && (
+                                                <Badge variant="destructive" className="flex items-center gap-1">
+                                                    <AlertTriangle className="h-3 w-3" />
+                                                    Overdue
+                                                </Badge>
+                                            )}
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4 text-sm">
+                                            <div>
+                                                <span className="text-gray-500 dark:text-gray-400">Monthly Payment:</span>
+                                                <p className="font-medium">{formatCurrency(selectedLoan.monthly_payment)}</p>
+                                            </div>
+                                            <div>
+                                                <span className="text-gray-500 dark:text-gray-400">Remaining Balance:</span>
+                                                <p className="font-medium">{formatCurrency(calculateRemainingBalance(selectedLoan, payments))}</p>
+                                            </div>
+                                            {penaltyInfo.isOverdue && (
+                                                <>
+                                                    <div>
+                                                        <span className="text-gray-500 dark:text-gray-400">Days Overdue:</span>
+                                                        <p className="font-medium text-red-600">{penaltyInfo.daysOverdue} days</p>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-gray-500 dark:text-gray-400">Penalty Amount:</span>
+                                                        <p className="font-medium text-red-600">{formatCurrency(penaltyInfo.penalty)}</p>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                        {penaltyInfo.isOverdue && (
+                                            <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
+                                                <p className="text-sm text-red-700 dark:text-red-300">
+                                                    <strong>Note:</strong> This loan is overdue. A penalty of {formatCurrency(penaltyInfo.penalty)} will be automatically calculated for regular payments.
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
 
                             <div>
@@ -876,7 +1049,15 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
 
                             <div>
                                 <Label htmlFor="payment_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">Payment Type</Label>
-                                <Select value={data.payment_type} onValueChange={(value) => setData('payment_type', value)}>
+                                <Select value={data.payment_type} onValueChange={(value) => {
+                                    setData('payment_type', value);
+                                    // Auto-calculate amount for regular payments
+                                    if (value === 'regular' && selectedLoan) {
+                                        const baseAmount = selectedLoan.monthly_payment;
+                                        const penaltyAmount = penaltyInfo?.isOverdue ? penaltyInfo.penalty : 0;
+                                        setData('amount', (baseAmount + penaltyAmount).toString());
+                                    }
+                                }}>
                                     <SelectTrigger className="mt-1">
                                         <SelectValue />
                                     </SelectTrigger>
@@ -889,6 +1070,11 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                     </SelectContent>
                                 </Select>
                                 <InputError message={errors.payment_type} />
+                                {data.payment_type === 'regular' && penaltyInfo?.isOverdue && (
+                                    <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                                        Amount includes penalty of {formatCurrency(penaltyInfo.penalty)}
+                                    </p>
+                                )}
                             </div>
 
                             <div>

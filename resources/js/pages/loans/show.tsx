@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Head, router } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { 
     ArrowLeft, 
     User, 
@@ -14,7 +15,8 @@ import {
     Clock,
     CheckCircle,
     AlertTriangle,
-    FileText
+    FileText,
+    Calculator
 } from 'lucide-react';
 
 interface Borrower {
@@ -26,6 +28,15 @@ interface Borrower {
     email: string;
     phone: string;
     status: number;
+}
+
+interface LoanFee {
+    id: number;
+    loan_id: number;
+    fee_type: string;
+    calculate_fee_on: string;
+    fee_percentage?: number;
+    fixed_amount?: number;
 }
 
 interface Loan {
@@ -40,6 +51,7 @@ interface Loan {
     interest_rate: number;
     interest_method?: string;
     total_amount: number;
+    released_amount: number;
     monthly_payment: number;
     loan_type: string;
     purpose?: string;
@@ -49,6 +61,7 @@ interface Loan {
     notes?: string;
     created_at: string;
     updated_at: string;
+    fees?: LoanFee[];
 }
 
 interface LoanShowPageProps {
@@ -93,20 +106,33 @@ const getNextPaymentDate = (releaseDate: string) => {
     const release = new Date(releaseDate);
     const today = new Date();
     
-    // Start from the release date and add months until we find the next payment date
-    let nextPayment = new Date(release);
-    let monthsToAdd = 1;
+    // Start with the release date and add one month for the first payment
+    const nextPayment = new Date(release);
+    nextPayment.setMonth(release.getMonth() + 1);
     
+    // If the first payment date has already passed, keep adding months until we get a future date
     while (nextPayment <= today) {
-        nextPayment = new Date(release);
-        nextPayment.setMonth(release.getMonth() + monthsToAdd);
-        monthsToAdd++;
+        nextPayment.setMonth(nextPayment.getMonth() + 1);
     }
     
     return nextPayment;
 };
 
 export default function LoanShow({ loan }: LoanShowPageProps) {
+    const [isCalculationModalOpen, setIsCalculationModalOpen] = useState(false);
+
+    const calculateFeeAmount = (fee: LoanFee) => {
+        if (fee.fee_percentage) {
+            const baseAmount = fee.calculate_fee_on === 'principal' ? loan.principal_amount : loan.total_amount;
+            return (baseAmount * fee.fee_percentage / 100);
+        } else if (fee.fixed_amount) {
+            return fee.fixed_amount;
+        }
+        return 0;
+    };
+
+    const totalFees = loan.fees?.reduce((total, fee) => total + calculateFeeAmount(fee), 0) || 0;
+
     return (
         <AppLayout>
             <Head title={`Loan Details - ${loan.loan_id}`} />
@@ -209,6 +235,60 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
                                             <p className="text-2xl font-bold text-gray-900 dark:text-white">
                                                 {formatCurrency(loan.total_amount)}
                                             </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Released Amount</p>
+                                            <Dialog open={isCalculationModalOpen} onOpenChange={setIsCalculationModalOpen}>
+                                                <DialogTrigger asChild>
+                                                    <button className="text-2xl font-bold text-green-600 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300 transition-colors cursor-pointer flex items-center gap-2">
+                                                        {formatCurrency(loan.released_amount)}
+                                                        <Calculator className="h-5 w-5" />
+                                                    </button>
+                                                </DialogTrigger>
+                                                <DialogContent className="max-w-md">
+                                                    <DialogHeader>
+                                                        <DialogTitle>Released Amount Calculation</DialogTitle>
+                                                    </DialogHeader>
+                                                    <div className="space-y-4">
+                                                        <div className="flex justify-between items-center py-2 border-b">
+                                                            <span className="font-medium">Principal Amount:</span>
+                                                            <span className="text-green-600 font-semibold">{formatCurrency(loan.principal_amount)}</span>
+                                                        </div>
+                                                        
+                                                        {loan.fees && loan.fees.length > 0 ? (
+                                                            <>
+                                                                <div className="space-y-2">
+                                                                    <h4 className="font-medium text-gray-700 dark:text-gray-300">Fees Deducted:</h4>
+                                                                    {loan.fees.map((fee, index) => (
+                                                                        <div key={index} className="flex justify-between items-center text-sm">
+                                                                            <span className="capitalize">{fee.fee_type.replace('_', ' ')}:</span>
+                                                                            <span className="text-red-600 font-medium">-{formatCurrency(calculateFeeAmount(fee))}</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                                
+                                                                <div className="flex justify-between items-center py-2 border-t border-b font-medium">
+                                                                    <span>Total Fees:</span>
+                                                                    <span className="text-red-600">-{formatCurrency(totalFees)}</span>
+                                                                </div>
+                                                            </>
+                                                        ) : (
+                                                            <div className="text-center text-gray-500 py-4">
+                                                                No fees applied to this loan
+                                                            </div>
+                                                        )}
+                                                        
+                                                        <div className="flex justify-between items-center py-3 bg-green-50 dark:bg-green-900/20 rounded-lg px-4 font-bold text-lg">
+                                                            <span>Released Amount:</span>
+                                                            <span className="text-green-600 dark:text-green-400">{formatCurrency(loan.released_amount)}</span>
+                                                        </div>
+                                                        
+                                                        <div className="text-xs text-gray-500 text-center">
+                                                            Released Amount = Principal Amount - Total Fees
+                                                        </div>
+                                                    </div>
+                                                </DialogContent>
+                                            </Dialog>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">Monthly Payment</p>

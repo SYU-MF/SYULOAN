@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use App\Models\LoanPenalty;
 
 class Loan extends Model
 {
@@ -28,10 +29,10 @@ class Loan extends Model
         'interest_rate',
         'interest_method',
         'total_amount',
+        'released_amount',
         'monthly_payment',
         'loan_type',
         'purpose',
-        'collateral',
         'status',
         'due_date',
         'notes',
@@ -42,6 +43,7 @@ class Loan extends Model
         'due_date' => 'date',
         'principal_amount' => 'decimal:2',
         'total_amount' => 'decimal:2',
+        'released_amount' => 'decimal:2',
         'monthly_payment' => 'decimal:2',
         'interest_rate' => 'decimal:2',
     ];
@@ -60,6 +62,32 @@ class Loan extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Get the fees for the loan.
+     */
+    public function fees(): HasMany
+    {
+        return $this->hasMany(LoanFee::class);
+    }
+
+
+
+    /**
+     * Get the collaterals for the loan.
+     */
+    public function collaterals(): HasMany
+    {
+        return $this->hasMany(LoanCollateral::class);
+    }
+
+    /**
+     * Get the penalties for the loan.
+     */
+    public function penalties(): HasMany
+    {
+        return $this->hasMany(LoanPenalty::class);
     }
 
     /**

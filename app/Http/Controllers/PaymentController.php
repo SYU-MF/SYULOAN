@@ -170,27 +170,36 @@ class PaymentController extends Controller
         $totalPaid = $loan->payments()->where('status', Payment::STATUS_COMPLETED)->sum('amount');
         $remainingBalance = $loan->total_amount - $totalPaid;
         
-        // Calculate precise interest and principal breakdown
-        $totalInterest = $loan->total_amount - $loan->principal_amount;
+        // Calculate penalty for overdue payments
+        $penalty = $this->calculatePenalty($loan, $paymentType);
         
-        // Use precise decimal calculation for monthly interest
-        $monthlyInterest = round($totalInterest / $loan->loan_duration, 2);
-        
-        // For simple interest loans, interest portion is fixed per month
-        $interestPortion = min($monthlyInterest, $amount, $remainingBalance);
-        
-        // Remaining amount goes to principal - ensure precision
-        $principalPortion = round($amount - $interestPortion, 2);
-        
-        // Ensure we don't exceed remaining balance
-        if (($interestPortion + $principalPortion) > $remainingBalance) {
-            $principalPortion = round($remainingBalance - $interestPortion, 2);
+        // Adjust amount for penalty calculation
+        $amountAfterPenalty = $amount;
+        if ($paymentType === 'penalty') {
+            // For penalty payments, the entire amount goes to penalty
+            $penalty = $amount;
+            $interestPortion = 0;
+            $principalPortion = 0;
+        } else {
+            // For regular payments, calculate interest and principal
+            $totalInterest = $loan->total_amount - $loan->principal_amount;
+            
+            // Use precise decimal calculation for monthly interest
+            $monthlyInterest = round($totalInterest / $loan->loan_duration, 2);
+            
+            // For simple interest loans, interest portion is fixed per month
+            $interestPortion = min($monthlyInterest, $amountAfterPenalty, $remainingBalance);
+            
+            // Remaining amount goes to principal - ensure precision
+            $principalPortion = round($amountAfterPenalty - $interestPortion, 2);
+            
+            // Ensure we don't exceed remaining balance
+            if (($interestPortion + $principalPortion) > $remainingBalance) {
+                $principalPortion = round($remainingBalance - $interestPortion, 2);
+            }
         }
         
-        // Calculate penalty for late payments (can be enhanced)
-        $penalty = 0;
-        
-        $newRemainingBalance = round(max(0, $remainingBalance - $amount), 2);
+        $newRemainingBalance = round(max(0, $remainingBalance - ($principalPortion + $interestPortion)), 2);
         
         return [
             'principal' => $principalPortion,
@@ -198,6 +207,84 @@ class PaymentController extends Controller
             'penalty' => $penalty,
             'remaining_balance' => $newRemainingBalance,
         ];
+    }
+    
+    /**
+     * Calculate penalty amount for overdue payments.
+     */
+    private function calculatePenalty(Loan $loan, string $paymentType): float
+    {
+        // If this is a penalty payment, don't calculate additional penalty
+        if ($paymentType === 'penalty') {
+            return 0;
+        }
+        
+        // Get all penalties for this loan
+        $penalties = $loan->penalties;
+        
+        // If no penalties configured, return 0
+        if ($penalties->isEmpty()) {
+            return 0;
+        }
+        
+        // Calculate days overdue based on loan schedule
+        $loanReleaseDate = Carbon::parse($loan->loan_release_date);
+        $currentDate = Carbon::now();
+        
+        // Find the most recent due date that has passed
+        $monthsElapsed = $loanReleaseDate->diffInMonths($currentDate);
+        $lastDueDate = $loanReleaseDate->copy()->addMonths($monthsElapsed);
+        
+        $totalPenalty = 0;
+        
+        // Calculate penalty for each penalty configuration
+        foreach ($penalties as $penaltyConfig) {
+            // Skip if penalty type is 'none'
+            if ($penaltyConfig->penalty_type === 'none') {
+                continue;
+            }
+            
+            // Use penalty-specific grace period
+            $gracePeriodDays = $penaltyConfig->grace_period_days ?? 7;
+            $daysOverdue = $currentDate->diffInDays($lastDueDate) - $gracePeriodDays;
+            
+            if ($daysOverdue <= 0) {
+                continue; // No penalty if within grace period
+            }
+            
+            // Calculate penalty based on configuration
+            $penaltyRate = $penaltyConfig->penalty_rate ?? 0.02;
+            
+            if ($penaltyConfig->penalty_type === 'fixed') {
+                // Fixed penalty amount
+                $penalty = $penaltyRate;
+            } else {
+                // Percentage-based penalty
+                $monthsOverdue = max(1, ceil($daysOverdue / 30));
+                
+                // Determine base amount for penalty calculation
+                $baseAmount = 0;
+                switch ($penaltyConfig->penalty_calculation_base) {
+                    case 'principal_amount':
+                        $baseAmount = $loan->principal_amount;
+                        break;
+                    case 'remaining_balance':
+                        $totalPaid = $loan->payments()->where('status', Payment::STATUS_COMPLETED)->sum('amount');
+                        $baseAmount = $loan->total_amount - $totalPaid;
+                        break;
+                    case 'monthly_payment':
+                    default:
+                        $baseAmount = $loan->monthly_payment;
+                        break;
+                }
+                
+                $penalty = round($baseAmount * ($penaltyRate / 100) * $monthsOverdue, 2);
+            }
+            
+            $totalPenalty += $penalty;
+        }
+        
+        return $totalPenalty;
     }
 
     /**
