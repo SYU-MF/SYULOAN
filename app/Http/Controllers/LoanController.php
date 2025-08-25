@@ -193,7 +193,7 @@ class LoanController extends Controller
      */
     public function show(Loan $loan)
     {
-        $loan->load(['borrower', 'fees']);
+        $loan->load(['borrower', 'fees', 'payments.processedBy']);
         return Inertia::render('loans/show', [
             'loan' => $loan
         ]);

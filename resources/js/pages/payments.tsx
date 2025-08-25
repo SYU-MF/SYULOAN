@@ -53,12 +53,17 @@ const calculatePenalty = (loan: Loan): { penalty: number; daysOverdue: number; i
     
     // Find the most recent payment due date that has passed
     let lastDueDate = new Date(nextPaymentDate);
-    while (lastDueDate <= currentDate) {
+    
+    // Keep advancing the due date until we find the most recent one that has passed
+    while (true) {
         const nextDue = new Date(lastDueDate);
         nextDue.setMonth(lastDueDate.getMonth() + 1);
+        
+        // If the next due date is still in the past or today, advance to it
         if (nextDue <= currentDate) {
             lastDueDate = nextDue;
         } else {
+            // The next due date is in the future, so lastDueDate is the most recent past due date
             break;
         }
     }

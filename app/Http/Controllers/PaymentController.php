@@ -21,7 +21,7 @@ class PaymentController extends Controller
             ->orderBy('created_at', 'desc')
             ->get();
 
-        $activeLoans = Loan::with('borrower')
+        $activeLoans = Loan::with(['borrower', 'penalties'])
             ->where('status', Loan::STATUS_ACTIVE)
             ->get();
 

@@ -162,6 +162,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
     const [statusFilter, setStatusFilter] = useState('all');
     const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         borrower_id: '',
@@ -326,7 +328,10 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        
+        setIsConfirmModalOpen(true);
+    };
+
+    const handleConfirmSubmit = () => {
         // Create FormData to handle file uploads
         const formData = new FormData();
         
@@ -352,15 +357,20 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                 reset();
                 setCollateralFiles({});
                 setIsModalOpen(false);
+                setIsConfirmModalOpen(false);
+                setIsSuccessModalOpen(true);
             },
             onError: (errors) => {
                 console.error('Form submission errors:', errors);
+                setIsConfirmModalOpen(false);
             }
         });
     };
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
+        setIsConfirmModalOpen(false);
+        setIsSuccessModalOpen(false);
         reset();
         setCollateralFiles({});
     };
@@ -1309,6 +1319,132 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                     </Button>
                                 </div>
                             </form>
+                        </div>
+                    </div>
+                )}
+
+                {/* Confirmation Modal */}
+                {isConfirmModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+                            <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
+                                <div>
+                                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">Confirm Loan Creation</h3>
+                                    <p className="text-gray-600 dark:text-gray-300 mt-1">Please review the loan details before submitting</p>
+                                </div>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => setIsConfirmModalOpen(false)}
+                                    className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                                >
+                                    ✕
+                                </Button>
+                            </div>
+                            
+                            <div className="p-6 space-y-4">
+                                <div className="space-y-3">
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Borrower:</span>
+                                        <span className="text-gray-900 dark:text-white">
+                                            {eligibleBorrowers.find(b => b.id.toString() === data.borrower_id)?.first_name} {eligibleBorrowers.find(b => b.id.toString() === data.borrower_id)?.last_name}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Principal Amount:</span>
+                                        <span className="text-gray-900 dark:text-white font-semibold">
+                                            ₱{formatNumberWithCommas(data.principal_amount)}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Loan Duration:</span>
+                                        <span className="text-gray-900 dark:text-white">
+                                            {data.loan_duration} {data.duration_period}
+                                        </span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Interest Rate:</span>
+                                        <span className="text-gray-900 dark:text-white">{data.interest_rate}%</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Loan Type:</span>
+                                        <span className="text-gray-900 dark:text-white capitalize">{data.loan_type}</span>
+                                    </div>
+                                    <div className="flex justify-between">
+                                        <span className="font-medium text-gray-700 dark:text-gray-300">Release Date:</span>
+                                        <span className="text-gray-900 dark:text-white">{data.loan_release_date}</span>
+                                    </div>
+                                    {data.purpose && (
+                                        <div className="flex justify-between">
+                                            <span className="font-medium text-gray-700 dark:text-gray-300">Purpose:</span>
+                                            <span className="text-gray-900 dark:text-white">{data.purpose}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                
+                                <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
+                                    <div className="flex items-start">
+                                        <AlertTriangle className="h-5 w-5 text-yellow-600 dark:text-yellow-400 mt-0.5 mr-3 flex-shrink-0" />
+                                        <div>
+                                            <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Confirmation Required</h4>
+                                            <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
+                                                Once submitted, this loan application will be created and cannot be easily modified. Please ensure all details are correct.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setIsConfirmModalOpen(false)}
+                                    disabled={processing}
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    onClick={handleConfirmSubmit}
+                                    disabled={processing}
+                                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+                                >
+                                    {processing ? 'Creating...' : 'Confirm & Create Loan'}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Success Modal */}
+                {isSuccessModalOpen && (
+                    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+                            <div className="p-6 text-center">
+                                <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 dark:bg-green-900/20 mb-4">
+                                    <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Loan Created Successfully!</h3>
+                                <p className="text-gray-600 dark:text-gray-300 mb-6">
+                                    The loan application has been created and is now pending approval. The borrower will be notified of the status.
+                                </p>
+                                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4 mb-6">
+                                    <div className="flex items-center justify-center">
+                                        <div className="text-center">
+                                            <p className="text-sm font-medium text-green-800 dark:text-green-200">Next Steps</p>
+                                            <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                                                Review and approve the loan in the loans management section
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <Button
+                                    onClick={() => setIsSuccessModalOpen(false)}
+                                    className="w-full bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800"
+                                >
+                                    Continue
+                                </Button>
+                            </div>
                         </div>
                     </div>
                 )}

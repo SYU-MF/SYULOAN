@@ -16,7 +16,10 @@ import {
     CheckCircle,
     AlertTriangle,
     FileText,
-    Calculator
+    Calculator,
+    Receipt,
+    History,
+    XCircle
 } from 'lucide-react';
 
 interface Borrower {
@@ -37,6 +40,30 @@ interface LoanFee {
     calculate_fee_on: string;
     fee_percentage?: number;
     fixed_amount?: number;
+}
+
+interface Payment {
+    id: number;
+    payment_id: string;
+    loan_id: number;
+    amount: number;
+    payment_date: string;
+    payment_type: string;
+    payment_method: string;
+    status: string;
+    principal_amount?: number;
+    interest_amount?: number;
+    penalty_amount?: number;
+    remaining_balance?: number;
+    reference_number?: string;
+    notes?: string;
+    processed_by?: number;
+    processed_at?: string;
+    processed_by_user?: {
+        id: number;
+        name: string;
+        email: string;
+    };
 }
 
 interface Loan {
@@ -62,6 +89,7 @@ interface Loan {
     created_at: string;
     updated_at: string;
     fees?: LoanFee[];
+    payments?: Payment[];
 }
 
 interface LoanShowPageProps {
@@ -102,20 +130,89 @@ const getStatusBadge = (status: number) => {
     );
 };
 
-const getNextPaymentDate = (releaseDate: string) => {
+const getNextPaymentDate = (releaseDate: string, payments?: Payment[]) => {
     const release = new Date(releaseDate);
     const today = new Date();
     
-    // Start with the release date and add one month for the first payment
-    const nextPayment = new Date(release);
-    nextPayment.setMonth(release.getMonth() + 1);
+    // Count completed payments to determine which payment is next
+    const completedPayments = payments?.filter(payment => payment.status === 'completed') || [];
+    const paymentsCount = completedPayments.length;
     
-    // If the first payment date has already passed, keep adding months until we get a future date
-    while (nextPayment <= today) {
-        nextPayment.setMonth(nextPayment.getMonth() + 1);
-    }
+    // Calculate the next payment date based on completed payments
+    // First payment is 1 month after release, second is 2 months, etc.
+    const nextPayment = new Date(release);
+    nextPayment.setMonth(release.getMonth() + paymentsCount + 1);
     
     return nextPayment;
+};
+
+const getLastPaymentInfo = (payments?: Payment[]) => {
+    const completedPayments = payments?.filter(payment => payment.status === 'completed') || [];
+    
+    if (completedPayments.length === 0) {
+        return null;
+    }
+    
+    // Sort by payment date to get the most recent
+    const sortedPayments = completedPayments.sort((a, b) => 
+        new Date(b.payment_date).getTime() - new Date(a.payment_date).getTime()
+    );
+    
+    const lastPayment = sortedPayments[0];
+    const paymentNumber = completedPayments.length;
+    
+    return {
+        date: lastPayment.payment_date,
+        paymentNumber,
+        amount: lastPayment.amount
+    };
+};
+
+const getPaymentStatusBadge = (status: string) => {
+    const statusConfig = {
+        'pending': { label: 'Pending', variant: 'secondary' as const, icon: Clock },
+        'completed': { label: 'Completed', variant: 'default' as const, icon: CheckCircle },
+        'failed': { label: 'Failed', variant: 'destructive' as const, icon: XCircle },
+        'cancelled': { label: 'Cancelled', variant: 'destructive' as const, icon: XCircle },
+    };
+
+    const config = statusConfig[status as keyof typeof statusConfig] || {
+        label: 'Unknown',
+        variant: 'secondary' as const,
+        icon: AlertTriangle
+    };
+
+    const IconComponent = config.icon;
+
+    return (
+        <Badge variant={config.variant} className="flex items-center gap-1">
+            <IconComponent className="h-3 w-3" />
+            {config.label}
+        </Badge>
+    );
+};
+
+const formatPaymentType = (type: string) => {
+    const typeMap = {
+        'regular': 'Regular Payment',
+        'partial': 'Partial Payment',
+        'full': 'Full Payment',
+        'penalty': 'Penalty Payment',
+        'advance': 'Advance Payment'
+    };
+    return typeMap[type as keyof typeof typeMap] || type;
+};
+
+const formatPaymentMethod = (method: string) => {
+    const methodMap = {
+        'cash': 'Cash',
+        'bank_transfer': 'Bank Transfer',
+        'check': 'Check',
+        'online': 'Online',
+        'gcash': 'GCash',
+        'paymaya': 'PayMaya'
+    };
+    return methodMap[method as keyof typeof methodMap] || method;
 };
 
 export default function LoanShow({ loan }: LoanShowPageProps) {
@@ -132,6 +229,9 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
     };
 
     const totalFees = loan.fees?.reduce((total, fee) => total + calculateFeeAmount(fee), 0) || 0;
+    const completedPayments = loan.payments?.filter(payment => payment.status === 'completed') || [];
+    const totalPaid = completedPayments.reduce((total, payment) => total + payment.amount, 0);
+    const remainingBalance = loan.total_amount - totalPaid;
 
     return (
         <AppLayout>
@@ -354,7 +454,7 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
                                               <div>
                                                   <p className="text-sm text-gray-500 dark:text-gray-400">Next Payment Due</p>
                                                   <p className="font-medium text-gray-900 dark:text-white">
-                                                      {getNextPaymentDate(loan.loan_release_date).toLocaleDateString('en-US', {
+                                                      {getNextPaymentDate(loan.loan_release_date, loan.payments).toLocaleDateString('en-US', {
                                                           year: 'numeric',
                                                           month: 'long',
                                                           day: 'numeric'
@@ -362,6 +462,24 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
                                                   </p>
                                               </div>
                                           )}
+                                        {(() => {
+                                            const lastPaymentInfo = getLastPaymentInfo(loan.payments);
+                                            return lastPaymentInfo ? (
+                                                <div>
+                                                    <p className="text-sm text-gray-500 dark:text-gray-400">Last Payment</p>
+                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                        {new Date(lastPaymentInfo.date).toLocaleDateString('en-US', {
+                                                            year: 'numeric',
+                                                            month: 'long',
+                                                            day: 'numeric'
+                                                        })} (Payment #{lastPaymentInfo.paymentNumber})
+                                                    </p>
+                                                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                                                        Amount: {formatCurrency(lastPaymentInfo.amount)}
+                                                    </p>
+                                                </div>
+                                            ) : null;
+                                        })()}
                                         {loan.purpose && (
                                             <div>
                                                 <p className="text-sm text-gray-500 dark:text-gray-400">Purpose</p>
@@ -379,6 +497,126 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
                                         <div className="mt-4">
                                             <p className="text-sm text-gray-500 dark:text-gray-400">Notes</p>
                                             <p className="font-medium text-gray-900 dark:text-white">{loan.notes}</p>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+
+                            {/* Payment Summary */}
+                            <Card className="dark:bg-gray-800 dark:border-gray-700">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                                        <Receipt className="h-5 w-5" />
+                                        <span>Payment Summary</span>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Paid</p>
+                                            <p className="text-xl font-bold text-green-600 dark:text-green-400">
+                                                {formatCurrency(totalPaid)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Remaining Balance</p>
+                                            <p className="text-xl font-bold text-orange-600 dark:text-orange-400">
+                                                {formatCurrency(remainingBalance)}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400">Total Payments</p>
+                                            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                                                {completedPayments.length}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Payment History */}
+                            <Card className="dark:bg-gray-800 dark:border-gray-700">
+                                <CardHeader>
+                                    <CardTitle className="flex items-center space-x-2 text-gray-900 dark:text-white">
+                                        <History className="h-5 w-5" />
+                                        <span>Payment History</span>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {loan.payments && loan.payments.length > 0 ? (
+                                        <div className="space-y-4">
+                                            {loan.payments.map((payment) => (
+                                                <div key={payment.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4">
+                                                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                                                        <div className="flex-1">
+                                                            <div className="flex items-center gap-3 mb-2">
+                                                                <h4 className="font-medium text-gray-900 dark:text-white">
+                                                                    {payment.payment_id}
+                                                                </h4>
+                                                                {getPaymentStatusBadge(payment.status)}
+                                                            </div>
+                                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+                                                                <div>
+                                                                    <p className="text-gray-500 dark:text-gray-400">Amount</p>
+                                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                                        {formatCurrency(payment.amount)}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-gray-500 dark:text-gray-400">Date</p>
+                                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                                        {new Date(payment.payment_date).toLocaleDateString('en-US', {
+                                                                            year: 'numeric',
+                                                                            month: 'short',
+                                                                            day: 'numeric'
+                                                                        })}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-gray-500 dark:text-gray-400">Type</p>
+                                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                                        {formatPaymentType(payment.payment_type)}
+                                                                    </p>
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-gray-500 dark:text-gray-400">Method</p>
+                                                                    <p className="font-medium text-gray-900 dark:text-white">
+                                                                        {formatPaymentMethod(payment.payment_method)}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            {payment.notes && (
+                                                                <div className="mt-2">
+                                                                    <p className="text-gray-500 dark:text-gray-400 text-sm">Notes</p>
+                                                                    <p className="text-gray-900 dark:text-white text-sm">{payment.notes}</p>
+                                                                </div>
+                                                            )}
+                                                            {payment.reference_number && (
+                                                                <div className="mt-2">
+                                                                    <p className="text-gray-500 dark:text-gray-400 text-sm">Reference</p>
+                                                                    <p className="text-gray-900 dark:text-white text-sm font-mono">{payment.reference_number}</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        {payment.remaining_balance !== undefined && (
+                                                            <div className="text-right">
+                                                                <p className="text-gray-500 dark:text-gray-400 text-sm">Balance After</p>
+                                                                <p className="font-bold text-lg text-gray-900 dark:text-white">
+                                                                    {formatCurrency(payment.remaining_balance)}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className="text-center py-8">
+                                            <Receipt className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                                            <p className="text-gray-500 dark:text-gray-400">No payments recorded yet</p>
+                                            <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">
+                                                Payment history will appear here once payments are made
+                                            </p>
                                         </div>
                                     )}
                                 </CardContent>
