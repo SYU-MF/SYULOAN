@@ -27,17 +27,14 @@ export const Textarea = ({ className, ...props }: TextareaProps) => {
 // Calculate remaining balance for a loan
 const calculateRemainingBalance = (loan: Loan, payments: Payment[]): number => {
     const totalPaid = payments
-        .filter(payment => {
-            // Handle both cases: payment.loan.id and payment.loan_id
-            const paymentLoanId = payment.loan?.id || payment.loan_id;
-            return paymentLoanId === loan.id && payment.status === 'completed';
-        })
+        .filter(payment => payment.loan.id === loan.id && payment.status === 'completed')
         .reduce((sum, payment) => {
             const amount = Number(payment.amount) || 0;
             return sum + amount;
         }, 0);
-    const remaining = Math.max(0, (Number(loan.total_amount) || 0) - totalPaid);
-    return remaining;
+    
+    const loanTotal = Number(loan.total_amount) || 0;
+    return Math.max(0, loanTotal - totalPaid);
 };
 
 // Calculate penalty for overdue loans
@@ -51,30 +48,18 @@ const calculatePenalty = (loan: Loan, payments: Payment[] = []): { penalty: numb
     }
     
     // Filter completed payments for this loan
-    const completedPayments = payments.filter(payment => {
-        const paymentLoanId = payment.loan?.id || payment.loan_id;
-        return paymentLoanId === loan.id && payment.status === 'completed';
-    });
+    const completedPayments = payments.filter(payment => 
+        payment.loan.id === loan.id && payment.status === 'completed'
+    );
     
-    // Calculate the next payment due date based on completed payments
+    // Calculate the current due date based on completed payments
     // First payment is one month after release, then advance by number of completed payments
-    const nextPaymentDate = new Date(loanReleaseDate);
-    nextPaymentDate.setMonth(loanReleaseDate.getMonth() + 1 + completedPayments.length);
+    const currentDueDate = new Date(loanReleaseDate);
+    currentDueDate.setMonth(loanReleaseDate.getMonth() + 1 + completedPayments.length);
     
-    // If the next payment hasn't come due yet, no penalty
-    if (currentDate < nextPaymentDate) {
+    // If the current payment hasn't come due yet, no penalty
+    if (currentDate < currentDueDate) {
         return { penalty: 0, daysOverdue: 0, isOverdue: false };
-    }
-    
-    // The current due date is the most recent payment that should have been made
-    // This is one month before the next payment date
-    let lastDueDate = new Date(nextPaymentDate);
-    lastDueDate.setMonth(nextPaymentDate.getMonth() - 1);
-    
-    // If there are no completed payments, the last due date is the first payment date
-    if (completedPayments.length === 0) {
-        lastDueDate = new Date(loanReleaseDate);
-        lastDueDate.setMonth(loanReleaseDate.getMonth() + 1);
     }
     
     let totalPenalty = 0;
@@ -90,8 +75,8 @@ const calculatePenalty = (loan: Loan, payments: Payment[] = []): { penalty: numb
         
         // Calculate days overdue (with configurable grace period)
         const gracePeriodDays = penaltyConfig.grace_period_days || 7;
-        const graceEndDate = new Date(lastDueDate);
-        graceEndDate.setDate(lastDueDate.getDate() + gracePeriodDays);
+        const graceEndDate = new Date(currentDueDate);
+        graceEndDate.setDate(currentDueDate.getDate() + gracePeriodDays);
         
         const timeDiff = currentDate.getTime() - graceEndDate.getTime();
         const daysOverdue = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
@@ -202,7 +187,6 @@ interface Payment {
     id: number;
     payment_id: string;
     loan: Loan;
-    loan_id?: number; // Add loan_id to handle cases where loan relationship might not be loaded
     amount: number;
     payment_date: string;
     payment_type: string;
@@ -318,11 +302,6 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
 
     const filteredPayments = useMemo(() => {
         return payments.filter(payment => {
-            // Add safety checks for loan relationship
-            if (!payment.loan || !payment.loan.borrower) {
-                return false;
-            }
-            
             const matchesSearch = 
                 payment.payment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 payment.loan.loan_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -362,10 +341,22 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
             const penalty = calculatePenalty(loan, payments);
             setPenaltyInfo(penalty);
             
-            // Auto-populate amount field with total payment due (monthly payment + penalty)
+            // Calculate remaining balance for this loan
+            const remainingBalance = calculateRemainingBalance(loan, payments);
             const monthlyPayment = Number(loan.monthly_payment) || 0;
             const penaltyAmount = penalty.isOverdue ? (Number(penalty.penalty) || 0) : 0;
-            const totalPaymentDue = monthlyPayment + penaltyAmount;
+            
+            let totalPaymentDue = 0;
+            
+            // Check if remaining balance is less than monthly payment (final payment)
+            if (remainingBalance <= monthlyPayment) {
+                // For final payment: use remaining balance + penalty (if overdue)
+                totalPaymentDue = remainingBalance + penaltyAmount;
+            } else {
+                // For regular payment: use monthly payment + penalty (if overdue)
+                totalPaymentDue = monthlyPayment + penaltyAmount;
+            }
+            
             setData('amount', totalPaymentDue.toString());
         } else {
             setSelectedLoan(null);

@@ -167,14 +167,14 @@ class PaymentController extends Controller
      */
     private function calculatePaymentBreakdown(Loan $loan, float $amount, string $paymentType): array
     {
-        // Calculate remaining balance based only on principal and interest payments (excluding penalties)
-        $totalPrincipalAndInterestPaid = $loan->payments()
-            ->where('status', Payment::STATUS_COMPLETED)
-            ->sum(DB::raw('principal_amount + interest_amount'));
-        $remainingBalance = $loan->total_amount - $totalPrincipalAndInterestPaid;
+        $totalPaid = $loan->payments()->where('status', Payment::STATUS_COMPLETED)->sum('amount');
+        $remainingBalance = $loan->total_amount - $totalPaid;
         
         // Calculate penalty for overdue payments
         $penalty = $this->calculatePenalty($loan, $paymentType);
+        
+        // Adjust amount for penalty calculation
+        $amountAfterPenalty = $amount - $penalty;
         
         // For all payment types except pure penalty, calculate interest and principal
         // Note: 'penalty' type now represents 'Regular with Penalty'
@@ -184,11 +184,10 @@ class PaymentController extends Controller
         $monthlyInterest = round($totalInterest / $loan->loan_duration, 2);
         
         // For simple interest loans, interest portion is fixed per month
-        // The full payment amount (including penalty) reduces the balance
-        $interestPortion = min($monthlyInterest, $amount, $remainingBalance);
+        $interestPortion = min($monthlyInterest, $amountAfterPenalty, $remainingBalance);
         
         // Remaining amount goes to principal - ensure precision
-        $principalPortion = round($amount - $interestPortion, 2);
+        $principalPortion = round($amountAfterPenalty - $interestPortion, 2);
         
         // Ensure we don't exceed remaining balance
         if (($interestPortion + $principalPortion) > $remainingBalance) {
@@ -199,8 +198,7 @@ class PaymentController extends Controller
         $principalPortion = max(0, $principalPortion);
         $interestPortion = max(0, $interestPortion);
         
-        // The full payment amount (including penalty) should reduce the remaining balance
-        $newRemainingBalance = round(max(0, $remainingBalance - $amount), 2);
+        $newRemainingBalance = round(max(0, $remainingBalance - ($principalPortion + $interestPortion)), 2);
         
         return [
             'principal' => $principalPortion,
