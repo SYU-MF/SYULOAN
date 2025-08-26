@@ -27,13 +27,21 @@ export const Textarea = ({ className, ...props }: TextareaProps) => {
 // Calculate remaining balance for a loan
 const calculateRemainingBalance = (loan: Loan, payments: Payment[]): number => {
     const totalPaid = payments
-        .filter(payment => payment.loan.id === loan.id && payment.status === 'completed')
-        .reduce((sum, payment) => sum + payment.amount, 0);
-    return Math.max(0, loan.total_amount - totalPaid);
+        .filter(payment => {
+            // Handle both cases: payment.loan.id and payment.loan_id
+            const paymentLoanId = payment.loan?.id || payment.loan_id;
+            return paymentLoanId === loan.id && payment.status === 'completed';
+        })
+        .reduce((sum, payment) => {
+            const amount = Number(payment.amount) || 0;
+            return sum + amount;
+        }, 0);
+    const remaining = Math.max(0, (Number(loan.total_amount) || 0) - totalPaid);
+    return remaining;
 };
 
 // Calculate penalty for overdue loans
-const calculatePenalty = (loan: Loan): { penalty: number; daysOverdue: number; isOverdue: boolean } => {
+const calculatePenalty = (loan: Loan, payments: Payment[] = []): { penalty: number; daysOverdue: number; isOverdue: boolean } => {
     const loanReleaseDate = new Date(loan.loan_release_date);
     const currentDate = new Date();
     
@@ -42,30 +50,31 @@ const calculatePenalty = (loan: Loan): { penalty: number; daysOverdue: number; i
         return { penalty: 0, daysOverdue: 0, isOverdue: false };
     }
     
-    // Calculate the next payment due date (first payment is one month after release)
-    const nextPaymentDate = new Date(loanReleaseDate);
-    nextPaymentDate.setMonth(loanReleaseDate.getMonth() + 1);
+    // Filter completed payments for this loan
+    const completedPayments = payments.filter(payment => {
+        const paymentLoanId = payment.loan?.id || payment.loan_id;
+        return paymentLoanId === loan.id && payment.status === 'completed';
+    });
     
-    // If the first payment hasn't come due yet, no penalty
+    // Calculate the next payment due date based on completed payments
+    // First payment is one month after release, then advance by number of completed payments
+    const nextPaymentDate = new Date(loanReleaseDate);
+    nextPaymentDate.setMonth(loanReleaseDate.getMonth() + 1 + completedPayments.length);
+    
+    // If the next payment hasn't come due yet, no penalty
     if (currentDate < nextPaymentDate) {
         return { penalty: 0, daysOverdue: 0, isOverdue: false };
     }
     
-    // Find the most recent payment due date that has passed
+    // The current due date is the most recent payment that should have been made
+    // This is one month before the next payment date
     let lastDueDate = new Date(nextPaymentDate);
+    lastDueDate.setMonth(nextPaymentDate.getMonth() - 1);
     
-    // Keep advancing the due date until we find the most recent one that has passed
-    while (true) {
-        const nextDue = new Date(lastDueDate);
-        nextDue.setMonth(lastDueDate.getMonth() + 1);
-        
-        // If the next due date is still in the past or today, advance to it
-        if (nextDue <= currentDate) {
-            lastDueDate = nextDue;
-        } else {
-            // The next due date is in the future, so lastDueDate is the most recent past due date
-            break;
-        }
+    // If there are no completed payments, the last due date is the first payment date
+    if (completedPayments.length === 0) {
+        lastDueDate = new Date(loanReleaseDate);
+        lastDueDate.setMonth(loanReleaseDate.getMonth() + 1);
     }
     
     let totalPenalty = 0;
@@ -186,12 +195,14 @@ interface Loan {
     status: number;
     loan_release_date: string;
     penalties?: LoanPenalty[];
+    payments?: Payment[];
 }
 
 interface Payment {
     id: number;
     payment_id: string;
     loan: Loan;
+    loan_id?: number; // Add loan_id to handle cases where loan relationship might not be loaded
     amount: number;
     payment_date: string;
     payment_type: string;
@@ -261,7 +272,7 @@ const getPaymentTypeBadge = (type: string) => {
         regular: { label: 'Regular', variant: 'default' as const },
         partial: { label: 'Partial', variant: 'secondary' as const },
         full: { label: 'Full Payment', variant: 'default' as const },
-        penalty: { label: 'Penalty', variant: 'destructive' as const },
+        penalty: { label: 'Regular with Penalty', variant: 'destructive' as const },
         advance: { label: 'Advance', variant: 'outline' as const },
     };
 
@@ -307,6 +318,11 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
 
     const filteredPayments = useMemo(() => {
         return payments.filter(payment => {
+            // Add safety checks for loan relationship
+            if (!payment.loan || !payment.loan.borrower) {
+                return false;
+            }
+            
             const matchesSearch = 
                 payment.payment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 payment.loan.loan_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -343,11 +359,18 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
         const loan = activeLoans.find(l => l.id.toString() === loanId);
         if (loan) {
             setSelectedLoan(loan);
-            const penalty = calculatePenalty(loan);
+            const penalty = calculatePenalty(loan, payments);
             setPenaltyInfo(penalty);
+            
+            // Auto-populate amount field with total payment due (monthly payment + penalty)
+            const monthlyPayment = Number(loan.monthly_payment) || 0;
+            const penaltyAmount = penalty.isOverdue ? (Number(penalty.penalty) || 0) : 0;
+            const totalPaymentDue = monthlyPayment + penaltyAmount;
+            setData('amount', totalPaymentDue.toString());
         } else {
             setSelectedLoan(null);
             setPenaltyInfo(null);
+            setData('amount', '');
         }
     };
 
@@ -806,7 +829,7 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                             <SelectItem value="regular">Regular</SelectItem>
                                             <SelectItem value="partial">Partial</SelectItem>
                                             <SelectItem value="full">Full Payment</SelectItem>
-                                            <SelectItem value="penalty">Penalty</SelectItem>
+                                            <SelectItem value="penalty">Regular with Penalty</SelectItem>
                                             <SelectItem value="advance">Advance</SelectItem>
                                         </SelectContent>
                                     </Select>
@@ -1015,6 +1038,57 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                             )}
                                         </div>
                                         {penaltyInfo.isOverdue && (
+                                            <div className="mt-4 space-y-3">
+                                                {/* Payment Breakdown Table */}
+                                                <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
+                                                    <h5 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Payment Breakdown</h5>
+                                                    <div className="space-y-2">
+                                                        <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                                                            <span className="text-sm text-gray-600 dark:text-gray-400">Monthly Payment:</span>
+                                                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                                                                {formatCurrency(Number(selectedLoan.monthly_payment) || 0)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-600">
+                                                            <span className="text-sm text-gray-600 dark:text-gray-400">Penalty Amount:</span>
+                                                            <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                                                                {formatCurrency(Number(penaltyInfo.penalty) || 0)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="flex justify-between items-center py-2 pt-3 border-t-2 border-blue-200 dark:border-blue-600">
+                                                            <span className="text-base font-semibold text-blue-700 dark:text-blue-300">Total Payment Due:</span>
+                                                            <span className="text-lg font-bold text-blue-800 dark:text-blue-200">
+                                                                {formatCurrency((Number(selectedLoan.monthly_payment) || 0) + (Number(penaltyInfo.penalty) || 0))}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Penalty Details */}
+                                                {selectedLoan.penalties && selectedLoan.penalties.length > 0 && (
+                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                                                        <h5 className="text-sm font-semibold text-yellow-800 dark:text-yellow-300 mb-3 flex items-center gap-2">
+                                                            <AlertTriangle className="h-4 w-4" />
+                                                            Penalty Configuration Details
+                                                        </h5>
+                                                        <div className="space-y-2">
+                                                            {selectedLoan.penalties.map((penalty, index) => (
+                                                                <div key={index} className="text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-800/30 p-2 rounded">
+                                                                    <div className="font-medium">{penalty.penalty_name || `Penalty ${index + 1}`}</div>
+                                                                    <div className="mt-1 space-y-1">
+                                                                        <div>Type: {penalty.penalty_type} ({penalty.penalty_rate}%)</div>
+                                                                        <div>Base: {penalty.penalty_calculation_base.replace('_', ' ')}</div>
+                                                                        <div>Grace Period: {penalty.grace_period_days} days</div>
+                                                                        {penalty.description && <div>Note: {penalty.description}</div>}
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                        {penaltyInfo.isOverdue && (
                                             <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/20 rounded-md">
                                                 <p className="text-sm text-red-700 dark:text-red-300">
                                                     <strong>Note:</strong> This loan is overdue. A penalty of {formatCurrency(penaltyInfo.penalty)} will be automatically calculated for regular payments.
@@ -1070,7 +1144,7 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                         <SelectItem value="regular">Regular</SelectItem>
                                         <SelectItem value="partial">Partial</SelectItem>
                                         <SelectItem value="full">Full Payment</SelectItem>
-                                        <SelectItem value="penalty">Penalty</SelectItem>
+                                        <SelectItem value="penalty">Regular with Penalty</SelectItem>
                                         <SelectItem value="advance">Advance</SelectItem>
                                     </SelectContent>
                                 </Select>
@@ -1203,7 +1277,7 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                             
                             <div className="border-t pt-6">
                                 <h4 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Payment Breakdown</h4>
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                                     <div>
                                         <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Principal</Label>
                                         <p className="text-lg font-medium text-gray-900 dark:text-white">
@@ -1214,6 +1288,12 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                         <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Interest</Label>
                                         <p className="text-lg font-medium text-gray-900 dark:text-white">
                                             {formatCurrency(selectedPayment.interest_amount)}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <Label className="text-sm font-medium text-gray-500 dark:text-gray-400">Penalty</Label>
+                                        <p className="text-lg font-medium text-red-600 dark:text-red-400">
+                                            {formatCurrency(selectedPayment.penalty_amount)}
                                         </p>
                                     </div>
                                     <div>

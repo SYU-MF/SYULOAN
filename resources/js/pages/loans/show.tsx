@@ -197,7 +197,7 @@ const formatPaymentType = (type: string) => {
         'regular': 'Regular Payment',
         'partial': 'Partial Payment',
         'full': 'Full Payment',
-        'penalty': 'Penalty Payment',
+        'penalty': 'Regular with Penalty Payment',
         'advance': 'Advance Payment'
     };
     return typeMap[type as keyof typeof typeMap] || type;
@@ -230,8 +230,11 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
 
     const totalFees = loan.fees?.reduce((total, fee) => total + calculateFeeAmount(fee), 0) || 0;
     const completedPayments = loan.payments?.filter(payment => payment.status === 'completed') || [];
-    const totalPaid = completedPayments.reduce((total, payment) => total + payment.amount, 0);
-    const remainingBalance = loan.total_amount - totalPaid;
+    const totalPaid = completedPayments.reduce((total, payment) => {
+        const amount = Number(payment.amount) || 0;
+        return total + amount;
+    }, 0);
+    const remainingBalance = Math.max(0, (Number(loan.total_amount) || 0) - totalPaid);
 
     return (
         <AppLayout>
