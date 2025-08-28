@@ -46,30 +46,30 @@ const mainNavItems: NavItem[] = [
         icon: BanknoteIcon,
     },
     {
-        title: 'Applications',
-        href: '/applications',
+        title: 'Accounts Payable',
+        href: '#',
         icon: FileText,
     },
     {
-        title: 'Reports',
-        href: '/reports',
+        title: 'Accounts Receivable',
+        href: '#',
         icon: BarChart3,
     },
-    {
-        title: 'Collections',
-        href: '/collections',
-        icon: AlertTriangle,
-    },
-    {
-        title: 'Calculator',
-        href: '/calculator',
-        icon: Calculator,
-    },
-    {
-        title: 'KYC Verification',
-        href: '/kyc',
-        icon: UserCheck,
-    },
+    // {
+    //     title: 'Collections',
+    //     href: '/collections',
+    //     icon: AlertTriangle,
+    // },
+    // {
+    //     title: 'Calculator',
+    //     href: '/calculator',
+    //     icon: Calculator,
+    // },
+    // {
+    //     title: 'KYC Verification',
+    //     href: '/kyc',
+    //     icon: UserCheck,
+    // },
 ];
 
 const footerNavItems: NavItem[] = [];

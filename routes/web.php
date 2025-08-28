@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\BorrowerController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LoanController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\RequirementController;
@@ -13,9 +14,7 @@ Route::get('/', function () {
 })->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::get('dashboard', function () {
-        return Inertia::render('dashboard');
-    })->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     Route::resource('borrowers', BorrowerController::class);
     Route::patch('borrowers/{borrower}/confirm', [BorrowerController::class, 'confirm'])->name('borrowers.confirm');
