@@ -47,7 +47,7 @@ const mainNavItems: NavItem[] = [
     },
     {
         title: 'Accounts Payable',
-        href: '#',
+        href: '/accounts-payable',
         icon: FileText,
     },
     {

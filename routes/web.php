@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountsPayableController;
 use App\Http\Controllers\BorrowerController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LoanController;
@@ -32,6 +33,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('payments', PaymentController::class);
     Route::get('payments/loan/{loan}', [PaymentController::class, 'loanPayments'])->name('payments.loan');
     Route::get('loans/{loan}/schedule', [PaymentController::class, 'generateSchedule'])->name('loans.schedule');
+    
+    Route::resource('accounts-payable', AccountsPayableController::class)->except(['create', 'store']);
+    Route::post('accounts-payable/generate', [AccountsPayableController::class, 'generatePayables'])->name('accounts-payable.generate');
+    Route::post('accounts-payable/{accountsPayable}/payment', [AccountsPayableController::class, 'makePayment'])->name('accounts-payable.payment');
+    Route::patch('accounts-payable/{accountsPayable}/cancel', [AccountsPayableController::class, 'cancel'])->name('accounts-payable.cancel');
+    Route::get('api/vendors', [AccountsPayableController::class, 'getVendors'])->name('api.vendors');
 });
 
 require __DIR__.'/settings.php';
