@@ -267,29 +267,9 @@ class PaymentController extends Controller
             $penaltyRate = $penaltyConfig->penalty_rate ?? 0.02;
             
             if ($penaltyConfig->penalty_type === 'fixed') {
-                // Fixed penalty amount
-                $penalty = $penaltyRate;
-            } else {
-                // Percentage-based penalty
+                // Fixed penalty amount per month overdue
                 $monthsOverdue = max(1, ceil($daysOverdue / 30));
-                
-                // Determine base amount for penalty calculation
-                $baseAmount = 0;
-                switch ($penaltyConfig->penalty_calculation_base) {
-                    case 'principal_amount':
-                        $baseAmount = $loan->principal_amount;
-                        break;
-                    case 'remaining_balance':
-                        $totalPaid = $loan->payments()->where('status', Payment::STATUS_COMPLETED)->sum('amount');
-                        $baseAmount = $loan->total_amount - $totalPaid;
-                        break;
-                    case 'monthly_payment':
-                    default:
-                        $baseAmount = $loan->monthly_payment;
-                        break;
-                }
-                
-                $penalty = round($baseAmount * ($penaltyRate / 100) * $monthsOverdue, 2);
+                $penalty = $penaltyRate * $monthsOverdue;
             }
             
             $totalPenalty += $penalty;

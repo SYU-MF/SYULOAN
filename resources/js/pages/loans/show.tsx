@@ -19,7 +19,11 @@ import {
     Calculator,
     Receipt,
     History,
-    XCircle
+    XCircle,
+    Shield,
+    Download,
+    File,
+    Image
 } from 'lucide-react';
 
 interface Borrower {
@@ -38,8 +42,18 @@ interface LoanFee {
     loan_id: number;
     fee_type: string;
     calculate_fee_on: string;
-    fee_percentage?: number;
     fixed_amount?: number;
+}
+
+interface LoanCollateral {
+    id: number;
+    loan_id: number;
+    name: string;
+    description: string;
+    defects?: string;
+    file_paths?: string[];
+    created_at: string;
+    updated_at: string;
 }
 
 interface Payment {
@@ -66,6 +80,57 @@ interface Payment {
     };
 }
 
+interface VehicleInfo {
+    id: number;
+    loan_id: number;
+    vehicle_make: string;
+    vehicle_model: string;
+    vehicle_type: string;
+    year_of_manufacture: number;
+    color: string;
+    plate_number: string;
+    chassis_number: string;
+    engine_number: string;
+    created_at: string;
+    updated_at: string;
+}
+
+interface LuxuryInfo {
+    id: number;
+    loan_id: number;
+    item_type: string;
+    brand: string;
+    model_collection_name: string;
+    material?: string;
+    serial_number?: string;
+    certificate_number?: string;
+    year_purchased?: number;
+    year_released?: number;
+    proof_of_authenticity?: string;
+    receipt_upload?: string;
+    created_at: string;
+    updated_at: string;
+}
+
+interface GadgetInfo {
+    id: number;
+    loan_id: number;
+    gadget_type: string;
+    brand: string;
+    model_series: string;
+    specifications?: string;
+    serial_number?: string;
+    imei?: string;
+    color_variant?: string;
+    year_purchased?: number;
+    year_released?: number;
+    warranty_details?: string;
+    proof_of_purchase?: string;
+    receipt_upload?: string;
+    created_at: string;
+    updated_at: string;
+}
+
 interface Loan {
     id: number;
     loan_id: string;
@@ -89,7 +154,11 @@ interface Loan {
     created_at: string;
     updated_at: string;
     fees?: LoanFee[];
+    collaterals?: LoanCollateral[];
     payments?: Payment[];
+    vehicleInfo?: VehicleInfo[];
+    luxuryInfo?: LuxuryInfo[];
+    gadgetInfo?: GadgetInfo[];
 }
 
 interface LoanShowPageProps {
@@ -219,10 +288,7 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
     const [isCalculationModalOpen, setIsCalculationModalOpen] = useState(false);
 
     const calculateFeeAmount = (fee: LoanFee) => {
-        if (fee.fee_percentage) {
-            const baseAmount = fee.calculate_fee_on === 'principal' ? loan.principal_amount : loan.total_amount;
-            return (baseAmount * fee.fee_percentage / 100);
-        } else if (fee.fixed_amount) {
+        if (fee.fixed_amount) {
             return fee.fixed_amount;
         }
         return 0;
@@ -425,7 +491,11 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">Interest Method</p>
-                                            <p className="font-medium text-gray-900 dark:text-white capitalize">{loan.interest_method}</p>
+                                            <p className="font-medium text-gray-900 dark:text-white">
+                                                {loan.interest_method === 'flat_annual' ? 'Flat Annual Rate' : 
+                                                 loan.interest_method === 'flat_one_time' ? 'Flat One-Time Rate' : 
+                                                 loan.interest_method || 'Flat Annual Rate'}
+                                            </p>
                                         </div>
                                         <div>
                                             <p className="text-sm text-gray-500 dark:text-gray-400">Duration</p>
@@ -490,10 +560,260 @@ export default function LoanShow({ loan }: LoanShowPageProps) {
                                             </div>
                                         )}
                                     </div>
-                                    {loan.collateral && (
+                                    
+                                    {/* Vehicle Information Section */}
+                                    {loan.vehicleInfo && loan.vehicleInfo.length > 0 && (
                                         <div className="mt-4">
-                                            <p className="text-sm text-gray-500 dark:text-gray-400">Collateral</p>
-                                            <p className="font-medium text-gray-900 dark:text-white">{loan.collateral}</p>
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center mb-3">
+                                                <CreditCard className="h-4 w-4 mr-1" />
+                                                Vehicle Information
+                                            </p>
+                                            {loan.vehicleInfo.map((vehicle) => (
+                                                <div key={vehicle.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-blue-50 dark:bg-blue-900/20">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Make & Model</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">
+                                                                {vehicle.vehicle_make} {vehicle.vehicle_model}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Type</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{vehicle.vehicle_type}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Year</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{vehicle.year_of_manufacture}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Color</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{vehicle.color}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Plate Number</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{vehicle.plate_number}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Chassis Number</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{vehicle.chassis_number}</p>
+                                                        </div>
+                                                        <div className="col-span-2">
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Engine Number</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{vehicle.engine_number}</p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Luxury Information Section */}
+                                    {loan.luxuryInfo && loan.luxuryInfo.length > 0 && (
+                                        <div className="mt-4">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center mb-3">
+                                                <CreditCard className="h-4 w-4 mr-1" />
+                                                Luxury Item Information
+                                            </p>
+                                            {loan.luxuryInfo.map((luxury) => (
+                                                <div key={luxury.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-purple-50 dark:bg-purple-900/20">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Item Type</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white capitalize">
+                                                                {luxury.item_type.replace('_', ' ')}
+                                                            </p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Brand</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{luxury.brand}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Model/Collection</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{luxury.model_collection_name}</p>
+                                                        </div>
+                                                        {luxury.material && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Material</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{luxury.material}</p>
+                                                            </div>
+                                                        )}
+                                                        {luxury.serial_number && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Serial Number</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{luxury.serial_number}</p>
+                                                            </div>
+                                                        )}
+                                                        {luxury.certificate_number && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Certificate Number</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{luxury.certificate_number}</p>
+                                                            </div>
+                                                        )}
+                                                        {luxury.year_purchased && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Year Purchased</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{luxury.year_purchased}</p>
+                                                            </div>
+                                                        )}
+                                                        {luxury.year_released && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Year Released</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{luxury.year_released}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {/* Gadget Information Section */}
+                                    {loan.gadgetInfo && loan.gadgetInfo.length > 0 && (
+                                        <div className="mt-4">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center mb-3">
+                                                <CreditCard className="h-4 w-4 mr-1" />
+                                                Gadget Information
+                                            </p>
+                                            {loan.gadgetInfo.map((gadget) => (
+                                                <div key={gadget.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 bg-green-50 dark:bg-green-900/20">
+                                                    <div className="grid grid-cols-2 gap-4">
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Gadget Type</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{gadget.gadget_type}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Brand</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{gadget.brand}</p>
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-sm text-gray-500 dark:text-gray-400">Model/Series</p>
+                                                            <p className="font-medium text-gray-900 dark:text-white">{gadget.model_series}</p>
+                                                        </div>
+                                                        {gadget.specifications && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Specifications</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.specifications}</p>
+                                                            </div>
+                                                        )}
+                                                        {gadget.serial_number && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Serial Number</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.serial_number}</p>
+                                                            </div>
+                                                        )}
+                                                        {gadget.imei && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">IMEI</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.imei}</p>
+                                                            </div>
+                                                        )}
+                                                        {gadget.color_variant && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Color</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.color_variant}</p>
+                                                            </div>
+                                                        )}
+                                                        {gadget.year_purchased && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Year Purchased</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.year_purchased}</p>
+                                                            </div>
+                                                        )}
+                                                        {gadget.year_released && (
+                                                            <div>
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Year Released</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.year_released}</p>
+                                                            </div>
+                                                        )}
+                                                        {gadget.warranty_details && (
+                                                            <div className="col-span-2">
+                                                                <p className="text-sm text-gray-500 dark:text-gray-400">Warranty Details</p>
+                                                                <p className="font-medium text-gray-900 dark:text-white">{gadget.warranty_details}</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    
+                                    {loan.collaterals && loan.collaterals.length > 0 && (
+                                        <div className="mt-4">
+                                            <p className="text-sm text-gray-500 dark:text-gray-400 flex items-center mb-3">
+                                                <Shield className="h-4 w-4 mr-1" />
+                                                Collateral ({loan.collaterals.length})
+                                            </p>
+                                            <div className="space-y-3">
+                                                {loan.collaterals.map((collateral, index) => (
+                                                    <div key={collateral.id} className="border border-gray-200 dark:border-gray-600 rounded-lg p-3">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h4 className="font-medium text-gray-900 dark:text-white">
+                                                                {collateral.name}
+                                                            </h4>
+                                                            <Badge variant="outline" className="text-xs">
+                                                                #{index + 1}
+                                                            </Badge>
+                                                        </div>
+                                                        
+                                                        <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">
+                                                            {collateral.description}
+                                                        </p>
+                                                        
+                                                        {collateral.defects && (
+                                                            <div className="mb-2">
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400">Defects:</p>
+                                                                <p className="text-sm text-orange-600 dark:text-orange-400">
+                                                                    {collateral.defects}
+                                                                </p>
+                                                            </div>
+                                                        )}
+                                                        
+                                                        {collateral.file_paths && collateral.file_paths.length > 0 && (
+                                                            <div className="mt-2">
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+                                                                    Attached Files ({collateral.file_paths.length}):
+                                                                </p>
+                                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                                    {collateral.file_paths.map((filePath, fileIndex) => {
+                                                                        const fileName = filePath.split('/').pop() || filePath;
+                                                                        const fileExtension = fileName.split('.').pop()?.toLowerCase();
+                                                                        const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(fileExtension || '');
+                                                                        
+                                                                        return (
+                                                                            <div key={fileIndex} className="flex items-center space-x-2 p-2 bg-gray-50 dark:bg-gray-700 rounded border">
+                                                                                {isImage ? (
+                                                                                    <Image className="h-4 w-4 text-blue-500" />
+                                                                                ) : (
+                                                                                    <File className="h-4 w-4 text-gray-500" />
+                                                                                )}
+                                                                                <span className="text-sm text-gray-700 dark:text-gray-300 flex-1 truncate">
+                                                                                    {fileName}
+                                                                                </span>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="sm"
+                                                                                    onClick={() => {
+                                                                                        const link = document.createElement('a');
+                                                                                        link.href = `/storage/${filePath}`;
+                                                                                        link.download = fileName;
+                                                                                        link.target = '_blank';
+                                                                                        document.body.appendChild(link);
+                                                                                        link.click();
+                                                                                        document.body.removeChild(link);
+                                                                                    }}
+                                                                                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                                                                                >
+                                                                                    <Download className="h-3 w-3" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        );
+                                                                    })}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
                                     )}
                                     {loan.notes && (

@@ -44,7 +44,8 @@ import {
     Shield,
     FileText,
     Upload,
-    X
+    X,
+    Smartphone
 } from 'lucide-react';
 
 interface Borrower {
@@ -84,7 +85,6 @@ interface Loan {
 interface Fee {
     fee_type: string;
     calculate_fee_on: string;
-    fee_percentage: string;
     fixed_amount: string;
     [key: string]: any;
 }
@@ -172,13 +172,48 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
         duration_period: 'months',
         loan_release_date: '',
         interest_rate: '',
-        interest_method: 'simple',
+        interest_method: 'flat_annual',
         loan_type: 'personal',
         purpose: '',
         notes: '',
         fees: [] as Fee[],
         collaterals: [] as Collateral[],
-        penalties: [] as Penalty[]
+        penalties: [] as Penalty[],
+        // Vehicle information fields
+        vehicle_make: '',
+        vehicle_model: '',
+        vehicle_type: '',
+        year_of_manufacture: '',
+        color: '',
+        plate_number: '',
+        chassis_number: '',
+        engine_number: '',
+        // Luxury item information fields
+        item_type: '',
+        luxury_brand: '',
+        model_collection_name: '',
+        material: '',
+        serial_number: '',
+        certificate_number: '',
+        year_purchased: '',
+        year_released: '',
+        proof_of_authenticity: '',
+        receipt_upload: '',
+        // Gadget information fields
+        gadget_type: '',
+        gadget_brand: '',
+        gadget_model: '',
+        model_series: '',
+        specifications: '',
+        gadget_serial_number: '',
+        imei: '',
+        color_variant: '',
+        gadget_color: '',
+        gadget_year_purchased: '',
+        gadget_year_released: '',
+        warranty_details: '',
+        proof_of_purchase: '',
+        gadget_receipt_upload: ''
     });
 
     // Format number with commas
@@ -203,7 +238,6 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
         const newFee: Fee = {
             fee_type: 'processing',
             calculate_fee_on: 'principal_amount',
-            fee_percentage: '',
             fixed_amount: ''
         };
         setData('fees', [...(data.fees as unknown as Fee[]), newFee]);
@@ -246,8 +280,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
     // Penalty management functions
     const addPenalty = () => {
         const newPenalty: Penalty = {
-            penalty_type: 'percentage',
-            penalty_rate: '2.00',
+            penalty_type: 'fixed',
+            penalty_rate: '100.00',
             grace_period_days: '7',
             penalty_calculation_base: 'monthly_payment',
             penalty_name: 'Late Payment Penalty',
@@ -654,7 +688,9 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="text-sm text-gray-900 dark:text-white capitalize">
-                                                        {loan.interest_method || 'Simple'}
+                                                        {loan.interest_method === 'flat_annual' ? 'Flat Annual Rate' : 
+                                                         loan.interest_method === 'flat_one_time' ? 'Flat One-Time Rate' : 
+                                                         loan.interest_method || 'Flat Annual Rate'}
                                                     </div>
                                                     <div className="text-sm text-gray-500 dark:text-gray-400">
                                                         Interest calculation
@@ -794,15 +830,438 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     <SelectValue />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="personal">Personal Loan</SelectItem>
+                                                    <SelectItem value="cash">Cash Loan</SelectItem>
+                                                    <SelectItem value="car">Car Loan</SelectItem>
+                                                    <SelectItem value="gadgets">Gadgets Loan</SelectItem>
+                                                    <SelectItem value="motorcycle">Motorcycle Loan</SelectItem>
+                                                    <SelectItem value="luxuries">Luxuries Loan</SelectItem>
+                                                    <SelectItem value="vacation">Vacation Loan</SelectItem>
                                                     <SelectItem value="business">Business Loan</SelectItem>
+                                                    <SelectItem value="personal">Personal Loan</SelectItem>
+                                                    <SelectItem value="travel">Travel Loan</SelectItem>
                                                     <SelectItem value="emergency">Emergency Loan</SelectItem>
-                                                    <SelectItem value="education">Education Loan</SelectItem>
-                                                    <SelectItem value="housing">Housing Loan</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <InputError message={errors.loan_type} className="mt-1" />
                                         </div>
+
+                                        {/* Vehicle Information Fields - Show only for car or motorcycle loans */}
+                                        {(data.loan_type === 'car' || data.loan_type === 'motorcycle') && (
+                                            <div className="col-span-2 space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                                <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
+                                                    <CreditCard className="h-5 w-5" />
+                                                    {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Information
+                                                </h4>
+                                                
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Label htmlFor="vehicle_make" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Make
+                                                        </Label>
+                                                        <Input
+                                                            id="vehicle_make"
+                                                            type="text"
+                                                            value={data.vehicle_make as string || ''}
+                                                            onChange={(e) => setData('vehicle_make', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Toyota, Honda"
+                                                        />
+                                                        <InputError message={errors.vehicle_make} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="vehicle_model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Model
+                                                        </Label>
+                                                        <Input
+                                                            id="vehicle_model"
+                                                            type="text"
+                                                            value={data.vehicle_model as string || ''}
+                                                            onChange={(e) => setData('vehicle_model', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Vios, Civic"
+                                                        />
+                                                        <InputError message={errors.vehicle_model} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="vehicle_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Type
+                                                        </Label>
+                                                        <Input
+                                                            id="vehicle_type"
+                                                            type="text"
+                                                            value={data.vehicle_type as string || ''}
+                                                            onChange={(e) => setData('vehicle_type', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder={data.loan_type === 'car' ? 'e.g., Sedan, SUV, Truck' : 'e.g., Sport, Cruiser, Scooter'}
+                                                        />
+                                                        <InputError message={errors.vehicle_type} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="year_of_manufacture" className="text-sm font-medium text-gray-700 dark:text-gray-300">Year of Manufacture</Label>
+                                                        <Input
+                                                            id="year_of_manufacture"
+                                                            type="number"
+                                                            value={data.year_of_manufacture as string || ''}
+                                                            onChange={(e) => setData('year_of_manufacture', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 2020"
+                                                            min="1900"
+                                                            max={new Date().getFullYear()}
+                                                        />
+                                                        <InputError message={errors.year_of_manufacture} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="color" className="text-sm font-medium text-gray-700 dark:text-gray-300">Color</Label>
+                                                        <Input
+                                                            id="color"
+                                                            type="text"
+                                                            value={data.color as string || ''}
+                                                            onChange={(e) => setData('color', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., White, Black, Red"
+                                                        />
+                                                        <InputError message={errors.color} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="plate_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Plate Number</Label>
+                                                        <Input
+                                                            id="plate_number"
+                                                            type="text"
+                                                            value={data.plate_number as string || ''}
+                                                            onChange={(e) => setData('plate_number', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., ABC-1234"
+                                                        />
+                                                        <InputError message={errors.plate_number} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="chassis_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Chassis Number (VIN)</Label>
+                                                        <Input
+                                                            id="chassis_number"
+                                                            type="text"
+                                                            value={data.chassis_number as string || ''}
+                                                            onChange={(e) => setData('chassis_number', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="Vehicle Identification Number"
+                                                        />
+                                                        <InputError message={errors.chassis_number} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="engine_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">Engine Number</Label>
+                                                        <Input
+                                                            id="engine_number"
+                                                            type="text"
+                                                            value={data.engine_number as string || ''}
+                                                            onChange={(e) => setData('engine_number', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="Engine identification number"
+                                                        />
+                                                        <InputError message={errors.engine_number} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Luxury Item Information Fields - Show only for luxury loans */}
+                                        {data.loan_type === 'luxuries' && (
+                                            <div className="col-span-2 space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                                <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
+                                                    <CreditCard className="h-5 w-5" />
+                                                    Luxury Item Information
+                                                </h4>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Label htmlFor="item_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Item Type
+                                                        </Label>
+                                                        <Select value={data.item_type as string || ''} onValueChange={(value) => setData('item_type', value)}>
+                                                            <SelectTrigger className="mt-1">
+                                                                <SelectValue placeholder="Select item type" />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="watch">Watch</SelectItem>
+                                                                <SelectItem value="jewelry">Jewelry</SelectItem>
+                                                                <SelectItem value="designer_bag">Designer Bag</SelectItem>
+                                                                <SelectItem value="shoes">Shoes</SelectItem>
+                                                                <SelectItem value="perfume">Perfume</SelectItem>
+                                                                <SelectItem value="other">Other</SelectItem>
+                                                            </SelectContent>
+                                                        </Select>
+                                                        <InputError message={errors.item_type} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="luxury_brand" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Brand
+                                                        </Label>
+                                                        <Input
+                                                            id="luxury_brand"
+                                                            type="text"
+                                                            value={data.luxury_brand as string || ''}
+                                                            onChange={(e) => setData('luxury_brand', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Rolex, Cartier, LV, Gucci"
+                                                        />
+                                                        <InputError message={errors.luxury_brand} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="model_collection_name" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Model/Collection Name
+                                                        </Label>
+                                                        <Input
+                                                            id="model_collection_name"
+                                                            type="text"
+                                                            value={data.model_collection_name as string || ''}
+                                                            onChange={(e) => setData('model_collection_name', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Submariner, Neverfull"
+                                                        />
+                                                        <InputError message={errors.model_collection_name} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="material" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Material
+                                                        </Label>
+                                                        <Input
+                                                            id="material"
+                                                            type="text"
+                                                            value={data.material as string || ''}
+                                                            onChange={(e) => setData('material', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Gold, Diamond, Leather"
+                                                        />
+                                                        <InputError message={errors.material} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="serial_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Serial Number
+                                                        </Label>
+                                                        <Input
+                                                            id="serial_number"
+                                                            type="text"
+                                                            value={data.serial_number as string || ''}
+                                                            onChange={(e) => setData('serial_number', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="Item serial number"
+                                                        />
+                                                        <InputError message={errors.serial_number} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="certificate_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Certificate Number
+                                                        </Label>
+                                                        <Input
+                                                            id="certificate_number"
+                                                            type="text"
+                                                            value={data.certificate_number as string || ''}
+                                                            onChange={(e) => setData('certificate_number', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="Certificate/authenticity number"
+                                                        />
+                                                        <InputError message={errors.certificate_number} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="year_purchased" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Year Purchased
+                                                        </Label>
+                                                        <Input
+                                                            id="year_purchased"
+                                                            type="number"
+                                                            value={data.year_purchased as string || ''}
+                                                            onChange={(e) => setData('year_purchased', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 2020"
+                                                            min="1900"
+                                                            max={new Date().getFullYear()}
+                                                        />
+                                                        <InputError message={errors.year_purchased} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="year_released" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Year Released
+                                                        </Label>
+                                                        <Input
+                                                            id="year_released"
+                                                            type="number"
+                                                            value={data.year_released as string || ''}
+                                                            onChange={(e) => setData('year_released', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 2019"
+                                                            min="1900"
+                                                            max={new Date().getFullYear()}
+                                                        />
+                                                        <InputError message={errors.year_released} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Gadget Information */}
+                                        {data.loan_type === 'gadgets' && (
+                                            <div className="space-y-4">
+                                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                    <Smartphone className="h-5 w-5" />
+                                                    Gadget Information
+                                                </h4>
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    <div>
+                                                        <Label htmlFor="gadget_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Gadget Type *
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_type"
+                                                            type="text"
+                                                            value={data.gadget_type as string || ''}
+                                                            onChange={(e) => setData('gadget_type', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Smartphone, Laptop, Tablet, Camera"
+                                                            required
+                                                        />
+                                                        <InputError message={errors.gadget_type} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="gadget_brand" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Brand *
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_brand"
+                                                            type="text"
+                                                            value={data.gadget_brand as string || ''}
+                                                            onChange={(e) => setData('gadget_brand', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Apple, Samsung, Sony, Dell"
+                                                            required
+                                                        />
+                                                        <InputError message={errors.gadget_brand} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="gadget_model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Model/Series *
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_model"
+                                                            type="text"
+                                                            value={data.gadget_model as string || ''}
+                                                            onChange={(e) => setData('gadget_model', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., iPhone 16 Pro Max, PS5, MacBook Air M3"
+                                                            required
+                                                        />
+                                                        <InputError message={errors.gadget_model} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="specifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Specifications
+                                                        </Label>
+                                                        <Input
+                                                            id="specifications"
+                                                            type="text"
+                                                            value={data.specifications as string || ''}
+                                                            onChange={(e) => setData('specifications', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 8GB RAM, 256GB Storage, M3 Processor"
+                                                        />
+                                                        <InputError message={errors.specifications} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="gadget_serial_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Serial Number/IMEI
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_serial_number"
+                                                            type="text"
+                                                            value={data.gadget_serial_number as string || ''}
+                                                            onChange={(e) => setData('gadget_serial_number', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="Device serial number or IMEI"
+                                                        />
+                                                        <InputError message={errors.gadget_serial_number} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="gadget_color" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Color/Variant
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_color"
+                                                            type="text"
+                                                            value={data.gadget_color as string || ''}
+                                                            onChange={(e) => setData('gadget_color', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Space Gray, Midnight Blue"
+                                                        />
+                                                        <InputError message={errors.gadget_color} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="gadget_year_purchased" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Year Purchased
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_year_purchased"
+                                                            type="number"
+                                                            value={data.gadget_year_purchased as string || ''}
+                                                            onChange={(e) => setData('gadget_year_purchased', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 2023"
+                                                            min="1990"
+                                                            max={new Date().getFullYear()}
+                                                        />
+                                                        <InputError message={errors.gadget_year_purchased} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="gadget_year_released" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Year Released
+                                                        </Label>
+                                                        <Input
+                                                            id="gadget_year_released"
+                                                            type="number"
+                                                            value={data.gadget_year_released as string || ''}
+                                                            onChange={(e) => setData('gadget_year_released', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 2023"
+                                                            min="1990"
+                                                            max={new Date().getFullYear()}
+                                                        />
+                                                        <InputError message={errors.gadget_year_released} className="mt-1" />
+                                                    </div>
+
+                                                    <div className="md:col-span-2">
+                                                        <Label htmlFor="warranty_details" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Warranty Details
+                                                        </Label>
+                                                        <Input
+                                                            id="warranty_details"
+                                                            type="text"
+                                                            value={data.warranty_details as string || ''}
+                                                            onChange={(e) => setData('warranty_details', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., 2 years manufacturer warranty, expires 2025"
+                                                        />
+                                                        <InputError message={errors.warranty_details} className="mt-1" />
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
 
                                         <div>
                                             <Label htmlFor="principal_amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">Principal Amount (PHP)</Label>
@@ -869,7 +1328,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                 value={data.interest_rate as string || ''}
                                 onChange={(e) => setData('interest_rate', e.target.value)}
                                 className="mt-1"
-                                placeholder="Annual interest rate"
+                                placeholder="Interest rate (e.g., 5 for 5%)"
                             />
                             <InputError message={errors.interest_rate} className="mt-1" />
                         </div>
@@ -881,10 +1340,18 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="simple">Simple Interest</SelectItem>
-                                    <SelectItem value="flat">Flat Interest</SelectItem>
+                                    <SelectItem value="flat_annual">Flat Annual Rate</SelectItem>
+                                    <SelectItem value="flat_one_time">Flat One-Time Rate</SelectItem>
                                 </SelectContent>
                             </Select>
+                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                {data.interest_method === 'flat_annual' && 
+                                    "Interest is calculated annually and applied proportionally to the loan duration"
+                                }
+                                {data.interest_method === 'flat_one_time' && 
+                                    "Interest is calculated once on the principal amount regardless of duration"
+                                }
+                            </div>
                             <InputError message={errors.interest_method} className="mt-1" />
                         </div>
 
@@ -992,7 +1459,6 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             </SelectTrigger>
                                                             <SelectContent>
                                                                 <SelectItem value="none">No Penalty</SelectItem>
-                                                                <SelectItem value="percentage">Percentage</SelectItem>
                                                                 <SelectItem value="fixed">Fixed Amount</SelectItem>
                                                             </SelectContent>
                                                         </Select>
@@ -1002,7 +1468,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         <>
                                                             <div>
                                                                 <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                    {penalty.penalty_type === 'percentage' ? 'Penalty Rate (%)' : 'Penalty Amount (₱)'}
+                                                                    Penalty Amount (₱)
                                                                 </Label>
                                                                 <Input
                                                                     type="number"
@@ -1010,7 +1476,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                                     value={penalty.penalty_rate}
                                                                     onChange={(e) => updatePenalty(index, 'penalty_rate', e.target.value)}
                                                                     className="mt-1"
-                                                                    placeholder={penalty.penalty_type === 'percentage' ? '2.00' : '100.00'}
+                                                                    placeholder="100.00"
                                                                 />
                                                             </div>
                                                             
@@ -1026,24 +1492,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                                     placeholder="7"
                                                                 />
                                                             </div>
-                                                            
-                                                            {penalty.penalty_type === 'percentage' && (
-                                                                <div>
-                                                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                        Calculate Penalty On
-                                                                    </Label>
-                                                                    <Select value={penalty.penalty_calculation_base} onValueChange={(value) => updatePenalty(index, 'penalty_calculation_base', value)}>
-                                                                        <SelectTrigger className="mt-1">
-                                                                            <SelectValue />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="principal_amount">Principal Amount</SelectItem>
-                                                                            <SelectItem value="remaining_balance">Remaining Balance</SelectItem>
-                                                                            <SelectItem value="monthly_payment">Monthly Payment</SelectItem>
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-                                                            )}
+
                                                         </>
                                                     )}
                                                     
@@ -1064,10 +1513,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 {penalty.penalty_type !== 'none' && (
                                                     <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
                                                         <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                                            <strong>Penalty Preview:</strong> {penalty.penalty_type === 'percentage' 
-                                                                ? `${penalty.penalty_rate}% of ${penalty.penalty_calculation_base?.replace('_', ' ')} per month overdue after ${penalty.grace_period_days} days grace period`
-                                                                : `₱${penalty.penalty_rate} fixed penalty per month overdue after ${penalty.grace_period_days} days grace period`
-                                                            }
+                                                            <strong>Penalty Preview:</strong> ₱{penalty.penalty_rate} fixed penalty per month overdue after {penalty.grace_period_days} days grace period
                                                         </p>
                                                     </div>
                                                 )}
@@ -1134,26 +1580,11 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         <SelectContent>
                                                             <SelectItem value="principal_amount">Principal Amount</SelectItem>
                                                             <SelectItem value="total_amount">Total Amount</SelectItem>
-                                                            <SelectItem value="monthly_payment">Monthly Payment</SelectItem>
                                                         </SelectContent>
                                                     </Select>
                                                 </div>
                                                 
                                                 <div>
-                                                    <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                        Fee Percentage (%)
-                                                    </Label>
-                                                    <Input
-                                                        type="number"
-                                                        step="0.01"
-                                                        value={fee.fee_percentage}
-                                                        onChange={(e) => updateFee(index, 'fee_percentage', e.target.value)}
-                                                        className="mt-1"
-                                                        placeholder="0.00"
-                                                    />
-                                                </div>
-                                                
-                                                <div className="md:col-span-2">
                                                     <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                         Fixed Amount (₱)
                                                     </Label>

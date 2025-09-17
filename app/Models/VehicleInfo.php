@@ -5,17 +5,21 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class LoanFee extends Model
+class VehicleInfo extends Model
 {
+    protected $table = 'vehicle_information';
+
     protected $fillable = [
         'loan_id',
-        'fee_type',
-        'calculate_fee_on',
-        'fixed_amount',
-    ];
-
-    protected $casts = [
-        'fixed_amount' => 'decimal:2',
+        'vehicle_type',
+        'make',
+        'model',
+        'type',
+        'year_of_manufacture',
+        'color',
+        'plate_number',
+        'chassis_number',
+        'engine_number',
     ];
 
     public function loan(): BelongsTo

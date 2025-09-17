@@ -92,28 +92,7 @@ const calculatePenalty = (loan: Loan, payments: Payment[] = []): { penalty: numb
         const monthsOverdue = Math.max(1, Math.ceil(daysOverdue / 30));
         let penalty = 0;
         
-        if (penaltyConfig.penalty_type === 'percentage') {
-            // Get base amount for percentage calculation
-            let baseAmount = 0;
-            switch (penaltyConfig.penalty_calculation_base) {
-                case 'monthly_payment':
-                    baseAmount = loan.monthly_payment;
-                    break;
-                case 'principal_amount':
-                    baseAmount = loan.principal_amount;
-                    break;
-                case 'remaining_balance':
-                    // For simplicity, using principal amount as remaining balance
-                    // In a real system, you'd calculate actual remaining balance
-                    baseAmount = loan.principal_amount;
-                    break;
-                default:
-                    baseAmount = loan.monthly_payment;
-            }
-            
-            const penaltyRate = (penaltyConfig.penalty_rate || 2) / 100;
-            penalty = Math.round(baseAmount * penaltyRate * monthsOverdue * 100) / 100;
-        } else if (penaltyConfig.penalty_type === 'fixed') {
+        if (penaltyConfig.penalty_type === 'fixed') {
             penalty = (penaltyConfig.penalty_rate || 0) * monthsOverdue;
         }
         
@@ -1067,8 +1046,7 @@ export default function PaymentsPage({ payments, activeLoans, statistics }: Paym
                                                                 <div key={index} className="text-xs text-yellow-700 dark:text-yellow-300 bg-yellow-100 dark:bg-yellow-800/30 p-2 rounded">
                                                                     <div className="font-medium">{penalty.penalty_name || `Penalty ${index + 1}`}</div>
                                                                     <div className="mt-1 space-y-1">
-                                                                        <div>Type: {penalty.penalty_type} ({penalty.penalty_rate}%)</div>
-                                                                        <div>Base: {penalty.penalty_calculation_base.replace('_', ' ')}</div>
+                                                                        <div>Type: {penalty.penalty_type} (₱{penalty.penalty_rate})</div>
                                                                         <div>Grace Period: {penalty.grace_period_days} days</div>
                                                                         {penalty.description && <div>Note: {penalty.description}</div>}
                                                                     </div>

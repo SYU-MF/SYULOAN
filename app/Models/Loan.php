@@ -91,6 +91,30 @@ class Loan extends Model
     }
 
     /**
+     * Get the vehicle information for the loan.
+     */
+    public function vehicleInfo(): HasMany
+    {
+        return $this->hasMany(VehicleInfo::class);
+    }
+
+    /**
+     * Get the luxury information for the loan.
+     */
+    public function luxuryInfo(): HasMany
+    {
+        return $this->hasMany(LuxuryInfo::class);
+    }
+
+    /**
+     * Get the gadget information for the loan.
+     */
+    public function gadgetInfo(): HasMany
+    {
+        return $this->hasMany(GadgetInfo::class);
+    }
+
+    /**
      * Generate a unique loan ID.
      */
     public static function generateLoanId(): string
@@ -103,7 +127,7 @@ class Loan extends Model
     }
 
     /**
-     * Calculate total amount based on principal and interest.
+     * Calculate total amount based on principal and interest method.
      */
     public function calculateTotalAmount(): float
     {
@@ -111,9 +135,24 @@ class Loan extends Model
         $rate = (float) $this->interest_rate / 100;
         $duration = (int) $this->loan_duration;
         
-        // Simple interest calculation
-        $interest = $principal * $rate * ($duration / 12);
-        return $principal + $interest;
+        switch ($this->interest_method) {
+            case 'flat_annual':
+                // Flat Annual Rate: Interest is calculated annually and applied for the loan duration
+                $annualInterest = $principal * $rate;
+                $totalInterest = $annualInterest * ($duration / 12);
+                return $principal + $totalInterest;
+                
+            case 'flat_one_time':
+                // Flat One-Time Rate: Interest is calculated once on the principal amount
+                $oneTimeInterest = $principal * $rate;
+                return $principal + $oneTimeInterest;
+                
+            default:
+                // Default to flat annual rate if method is not specified
+                $annualInterest = $principal * $rate;
+                $totalInterest = $annualInterest * ($duration / 12);
+                return $principal + $totalInterest;
+        }
     }
 
     /**
