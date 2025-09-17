@@ -790,19 +790,26 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                             </div>
 
                             <form onSubmit={handleSubmit} className="p-6 space-y-8">
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                    {/* Borrower Selection */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                {/* Section 1: Basic Information */}
+                                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-6 rounded-xl border border-blue-200 dark:border-blue-800">
+                                    <div className="flex items-center mb-6">
+                                        <div className="flex items-center justify-center w-10 h-10 bg-blue-600 text-white rounded-full mr-4">
                                             <User className="h-5 w-5" />
-                                            Borrower Information
-                                        </h4>
-
+                                        </div>
                                         <div>
-                                            <Label htmlFor="borrower_id" className="text-sm font-medium text-gray-700 dark:text-gray-300">Select Borrower</Label>
+                                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Basic Information</h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Select borrower and loan type</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div>
+                                            <Label htmlFor="borrower_id" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Borrower *
+                                            </Label>
                                             <Select value={data.borrower_id as string || ''} onValueChange={(value) => setData('borrower_id', value)}>
                                                 <SelectTrigger className="mt-1">
-                                                    <SelectValue placeholder="Choose an eligible borrower" />
+                                                    <SelectValue placeholder="Select a borrower" />
                                                 </SelectTrigger>
                                                 <SelectContent>
                                                     {eligibleBorrowers.map((borrower) => (
@@ -814,49 +821,219 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                             </Select>
                                             <InputError message={errors.borrower_id} className="mt-1" />
                                         </div>
-                                    </div>
-
-                                    {/* Loan Details */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                            <CreditCard className="h-5 w-5" />
-                                            Loan Details
-                                        </h4>
 
                                         <div>
-                                            <Label htmlFor="loan_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">Loan Type</Label>
+                                            <Label htmlFor="loan_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Loan Type *
+                                            </Label>
                                             <Select value={data.loan_type as string || ''} onValueChange={(value) => setData('loan_type', value)}>
                                                 <SelectTrigger className="mt-1">
-                                                    <SelectValue />
+                                                    <SelectValue placeholder="Select loan type" />
                                                 </SelectTrigger>
                                                 <SelectContent>
-                                                    <SelectItem value="cash">Cash Loan</SelectItem>
-                                                    <SelectItem value="car">Car Loan</SelectItem>
-                                                    <SelectItem value="gadgets">Gadgets Loan</SelectItem>
+                                                    <SelectItem value="personal">Cash Loan</SelectItem>
+                                                    <SelectItem value="vehicle">Car Loan</SelectItem>
                                                     <SelectItem value="motorcycle">Motorcycle Loan</SelectItem>
-                                                    <SelectItem value="luxuries">Luxuries Loan</SelectItem>
-                                                    <SelectItem value="vacation">Vacation Loan</SelectItem>
-                                                    <SelectItem value="business">Business Loan</SelectItem>
-                                                    <SelectItem value="personal">Personal Loan</SelectItem>
-                                                    <SelectItem value="travel">Travel Loan</SelectItem>
-                                                    <SelectItem value="emergency">Emergency Loan</SelectItem>
+                                                    <SelectItem value="gadgets">Gadget Loan</SelectItem>
+                                                    <SelectItem value="luxuries">Luxury Item Loan</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                             <InputError message={errors.loan_type} className="mt-1" />
                                         </div>
+                                    </div>
+                                </div>
 
-                                        {/* Vehicle Information Fields - Show only for car or motorcycle loans */}
-                                        {(data.loan_type === 'car' || data.loan_type === 'motorcycle') && (
-                                            <div className="col-span-2 space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                                {/* Section 2: Loan Details */}
+                                <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 p-6 rounded-xl border border-green-200 dark:border-green-800">
+                                    <div className="flex items-center mb-6">
+                                        <div className="flex items-center justify-center w-10 h-10 bg-green-600 text-white rounded-full mr-4">
+                                            <DollarSign className="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Loan Details</h3>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Amount, duration, and interest information</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                                        <div className="space-y-4">
+                                            <div>
+                                                <Label htmlFor="principal_amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Principal Amount (PHP) *
+                                                </Label>
+                                                <Input
+                                                    id="principal_amount"
+                                                    type="text"
+                                                    value={formatNumberWithCommas(data.principal_amount as string || '')}
+                                                    onChange={handlePrincipalAmountChange}
+                                                    className="mt-1"
+                                                    placeholder="Enter loan amount"
+                                                />
+                                                <InputError message={errors.principal_amount} className="mt-1" />
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label htmlFor="loan_duration" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Duration *
+                                                    </Label>
+                                                    <Input
+                                                        id="loan_duration"
+                                                        type="number"
+                                                        min="1"
+                                                        max="60"
+                                                        value={data.loan_duration as string || ''}
+                                                        onChange={(e) => setData('loan_duration', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="Duration"
+                                                    />
+                                                    <InputError message={errors.loan_duration} className="mt-1" />
+                                                </div>
+                                                <div>
+                                                    <Label htmlFor="duration_period" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Period *
+                                                    </Label>
+                                                    <Select value={data.duration_period as string || ''} onValueChange={(value) => setData('duration_period', value)}>
+                                                        <SelectTrigger className="mt-1">
+                                                            <SelectValue />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="months">Months</SelectItem>
+                                                            <SelectItem value="years">Years</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <InputError message={errors.duration_period} className="mt-1" />
+                                                </div>
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="loan_release_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Loan Release Date *
+                                                </Label>
+                                                <Input
+                                                    id="loan_release_date"
+                                                    type="date"
+                                                    value={data.loan_release_date as string || ''}
+                                                    onChange={(e) => setData('loan_release_date', e.target.value)}
+                                                    className="mt-1"
+                                                    min={new Date().toISOString().split('T')[0]}
+                                                />
+                                                <InputError message={errors.loan_release_date} className="mt-1" />
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-4">
+                                            <div>
+                                                <Label htmlFor="interest_rate" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Interest Rate (%) *
+                                                </Label>
+                                                <Input
+                                                    id="interest_rate"
+                                                    type="number"
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    value={data.interest_rate as string || ''}
+                                                    onChange={(e) => setData('interest_rate', e.target.value)}
+                                                    className="mt-1"
+                                                    placeholder="Interest rate (e.g., 5 for 5%)"
+                                                />
+                                                <InputError message={errors.interest_rate} className="mt-1" />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="interest_method" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Interest Method *
+                                                </Label>
+                                                <Select value={data.interest_method as string || ''} onValueChange={(value) => setData('interest_method', value)}>
+                                                    <SelectTrigger className="mt-1">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="flat_annual">Flat Annual Rate</SelectItem>
+                                                        <SelectItem value="flat_one_time">Flat One-Time Rate</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                                    {data.interest_method === 'flat_annual' && 
+                                                        "Interest is calculated annually and applied proportionally to the loan duration"
+                                                    }
+                                                    {data.interest_method === 'flat_one_time' && 
+                                                        "Interest is calculated once on the principal amount regardless of duration"
+                                                    }
+                                                </div>
+                                                <InputError message={errors.interest_method} className="mt-1" />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="purpose" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Loan Purpose
+                                                </Label>
+                                                <Textarea
+                                                    id="purpose"
+                                                    value={data.purpose as string || ''}
+                                                    onChange={(e) => setData('purpose', e.target.value)}
+                                                    className="mt-1"
+                                                    placeholder="Describe the purpose of this loan"
+                                                    rows={3}
+                                                />
+                                                <InputError message={errors.purpose} className="mt-1" />
+                                            </div>
+
+                                            <div>
+                                                <Label htmlFor="notes" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                    Notes (Optional)
+                                                </Label>
+                                                <Textarea
+                                                    id="notes"
+                                                    value={data.notes as string || ''}
+                                                    onChange={(e) => setData('notes', e.target.value)}
+                                                    className="mt-1"
+                                                    placeholder="Additional notes or comments"
+                                                    rows={2}
+                                                />
+                                                <InputError message={errors.notes} className="mt-1" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Section 3: Collateral Information (Conditional) */}
+                                {(data.loan_type === 'vehicle' || data.loan_type === 'motorcycle' || data.loan_type === 'gadgets' || data.loan_type === 'luxuries') && (
+                                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 p-6 rounded-xl border border-purple-200 dark:border-purple-800">
+                                        <div className="flex items-center mb-6">
+                                            <div className="flex items-center justify-center w-10 h-10 bg-purple-600 text-white rounded-full mr-4">
+                                                {data.loan_type === 'vehicle' || data.loan_type === 'motorcycle' ? (
+                                                    <CreditCard className="h-5 w-5" />
+                                                ) : data.loan_type === 'gadgets' ? (
+                                                    <Smartphone className="h-5 w-5" />
+                                                ) : (
+                                                    <CreditCard className="h-5 w-5" />
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                                    {data.loan_type === 'vehicle' || data.loan_type === 'motorcycle' ? 'Vehicle Information' :
+                                                     data.loan_type === 'gadgets' ? 'Gadget Information' : 'Luxury Item Information'}
+                                                </h3>
+                                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                                    Details about the collateral item
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Vehicle Information Fields */}
+                                        {(data.loan_type === 'vehicle' || data.loan_type === 'motorcycle') && (
+                                            <div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
                                                 <h4 className="text-lg font-semibold text-blue-900 dark:text-blue-100 flex items-center gap-2">
                                                     <CreditCard className="h-5 w-5" />
-                                                    {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Information
+                                                    {data.loan_type === 'vehicle' ? 'Vehicle' : 'Motorcycle'} Information
                                                 </h4>
                                                 
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                     <div>
                                                         <Label htmlFor="vehicle_make" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Make
+                                                            {data.loan_type === 'vehicle' ? 'Car' : 'Motorcycle'} Make
                                                         </Label>
                                                         <Input
                                                             id="vehicle_make"
@@ -871,7 +1048,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
 
                                                     <div>
                                                         <Label htmlFor="vehicle_model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Model
+                                                            {data.loan_type === 'vehicle' ? 'Car' : 'Motorcycle'} Model
                                                         </Label>
                                                         <Input
                                                             id="vehicle_model"
@@ -886,7 +1063,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
 
                                                     <div>
                                                         <Label htmlFor="vehicle_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            {data.loan_type === 'car' ? 'Car' : 'Motorcycle'} Type
+                                                            {data.loan_type === 'vehicle' ? 'Car' : 'Motorcycle'} Type
                                                         </Label>
                                                         <Input
                                                             id="vehicle_type"
@@ -894,7 +1071,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             value={data.vehicle_type as string || ''}
                                                             onChange={(e) => setData('vehicle_type', e.target.value)}
                                                             className="mt-1"
-                                                            placeholder={data.loan_type === 'car' ? 'e.g., Sedan, SUV, Truck' : 'e.g., Sport, Cruiser, Scooter'}
+                                                            placeholder={data.loan_type === 'vehicle' ? 'e.g., Sedan, SUV, Truck' : data.loan_type === 'motorcycle' ? 'e.g., Sport, Cruiser, Scooter' : ''}
                                                         />
                                                         <InputError message={errors.vehicle_type} className="mt-1" />
                                                     </div>
@@ -971,7 +1148,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
 
                                         {/* Luxury Item Information Fields - Show only for luxury loans */}
                                         {data.loan_type === 'luxuries' && (
-                                            <div className="col-span-2 space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                                            <div className="space-y-4 p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                                                 <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100 flex items-center gap-2">
                                                     <CreditCard className="h-5 w-5" />
                                                     Luxury Item Information
@@ -1110,61 +1287,77 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                             </div>
                                         )}
 
-                                        {/* Gadget Information */}
+                                        {/* Gadget Information Fields */}
                                         {data.loan_type === 'gadgets' && (
-                                            <div className="space-y-4">
-                                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                            <div className="space-y-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-lg border border-orange-200 dark:border-orange-800">
+                                                <h4 className="text-lg font-semibold text-orange-900 dark:text-orange-100 flex items-center gap-2">
                                                     <Smartphone className="h-5 w-5" />
                                                     Gadget Information
                                                 </h4>
+                                                
                                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <Label htmlFor="gadget_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Gadget Type *
-                                                        </Label>
-                                                        <Input
-                                                            id="gadget_type"
-                                                            type="text"
-                                                            value={data.gadget_type as string || ''}
-                                                            onChange={(e) => setData('gadget_type', e.target.value)}
-                                                            className="mt-1"
-                                                            placeholder="e.g., Smartphone, Laptop, Tablet, Camera"
-                                                            required
-                                                        />
-                                                        <InputError message={errors.gadget_type} className="mt-1" />
-                                                    </div>
+                                                <div>
+                                                    <Label htmlFor="gadget_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Gadget Type *
+                                                    </Label>
+                                                    <Input
+                                                        id="gadget_type"
+                                                        type="text"
+                                                        value={data.gadget_type as string || ''}
+                                                        onChange={(e) => setData('gadget_type', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="e.g., Smartphone, Laptop, Tablet, Camera"
+                                                        required
+                                                    />
+                                                    <InputError message={errors.gadget_type} className="mt-1" />
+                                                </div>
 
-                                                    <div>
-                                                        <Label htmlFor="gadget_brand" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Brand *
-                                                        </Label>
-                                                        <Input
-                                                            id="gadget_brand"
-                                                            type="text"
-                                                            value={data.gadget_brand as string || ''}
-                                                            onChange={(e) => setData('gadget_brand', e.target.value)}
-                                                            className="mt-1"
-                                                            placeholder="e.g., Apple, Samsung, Sony, Dell"
-                                                            required
-                                                        />
-                                                        <InputError message={errors.gadget_brand} className="mt-1" />
-                                                    </div>
+                                                <div>
+                                                    <Label htmlFor="gadget_brand" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Brand *
+                                                    </Label>
+                                                    <Input
+                                                        id="gadget_brand"
+                                                        type="text"
+                                                        value={data.gadget_brand as string || ''}
+                                                        onChange={(e) => setData('gadget_brand', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="e.g., Apple, Samsung, Sony, Dell"
+                                                        required
+                                                    />
+                                                    <InputError message={errors.gadget_brand} className="mt-1" />
+                                                </div>
 
-                                                    <div>
-                                                        <Label htmlFor="gadget_model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Model/Series *
-                                                        </Label>
-                                                        <Input
-                                                            id="gadget_model"
-                                                            type="text"
-                                                            value={data.gadget_model as string || ''}
-                                                            onChange={(e) => setData('gadget_model', e.target.value)}
-                                                            className="mt-1"
-                                                            placeholder="e.g., iPhone 16 Pro Max, PS5, MacBook Air M3"
-                                                            required
-                                                        />
-                                                        <InputError message={errors.gadget_model} className="mt-1" />
-                                                    </div>
+                                                <div>
+                                                    <Label htmlFor="gadget_model" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Model *
+                                                    </Label>
+                                                    <Input
+                                                        id="gadget_model"
+                                                        type="text"
+                                                        value={data.gadget_model as string || ''}
+                                                        onChange={(e) => setData('gadget_model', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="e.g., iPhone 16 Pro Max, PS5, MacBook Air M3"
+                                                        required
+                                                    />
+                                                    <InputError message={errors.gadget_model} className="mt-1" />
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor="model_series" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Model Series
+                                                    </Label>
+                                                    <Input
+                                                        id="model_series"
+                                                        type="text"
+                                                        value={data.model_series as string || ''}
+                                                        onChange={(e) => setData('model_series', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="e.g., Pro Max, Gaming Edition, M3"
+                                                    />
+                                                    <InputError message={errors.model_series} className="mt-1" />
+                                                </div>
 
                                                     <div>
                                                         <Label htmlFor="specifications" className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -1183,7 +1376,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
 
                                                     <div>
                                                         <Label htmlFor="gadget_serial_number" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Serial Number/IMEI
+                                                            Serial Number
                                                         </Label>
                                                         <Input
                                                             id="gadget_serial_number"
@@ -1191,14 +1384,44 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             value={data.gadget_serial_number as string || ''}
                                                             onChange={(e) => setData('gadget_serial_number', e.target.value)}
                                                             className="mt-1"
-                                                            placeholder="Device serial number or IMEI"
+                                                            placeholder="Device serial number"
                                                         />
                                                         <InputError message={errors.gadget_serial_number} className="mt-1" />
                                                     </div>
 
                                                     <div>
+                                                        <Label htmlFor="imei" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            IMEI (for mobile devices)
+                                                        </Label>
+                                                        <Input
+                                                            id="imei"
+                                                            type="text"
+                                                            value={data.imei as string || ''}
+                                                            onChange={(e) => setData('imei', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="IMEI number for smartphones/tablets"
+                                                        />
+                                                        <InputError message={errors.imei} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
+                                                        <Label htmlFor="color_variant" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                            Color Variant
+                                                        </Label>
+                                                        <Input
+                                                            id="color_variant"
+                                                            type="text"
+                                                            value={data.color_variant as string || ''}
+                                                            onChange={(e) => setData('color_variant', e.target.value)}
+                                                            className="mt-1"
+                                                            placeholder="e.g., Space Gray, Midnight Blue"
+                                                        />
+                                                        <InputError message={errors.color_variant} className="mt-1" />
+                                                    </div>
+
+                                                    <div>
                                                         <Label htmlFor="gadget_color" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Color/Variant
+                                                            Color
                                                         </Label>
                                                         <Input
                                                             id="gadget_color"
@@ -1206,7 +1429,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             value={data.gadget_color as string || ''}
                                                             onChange={(e) => setData('gadget_color', e.target.value)}
                                                             className="mt-1"
-                                                            placeholder="e.g., Space Gray, Midnight Blue"
+                                                            placeholder="e.g., Black, White, Blue"
                                                         />
                                                         <InputError message={errors.gadget_color} className="mt-1" />
                                                     </div>
@@ -1262,281 +1485,25 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 </div>
                                             </div>
                                         )}
+                                    </div>
+                                )}
 
-                                        <div>
-                                            <Label htmlFor="principal_amount" className="text-sm font-medium text-gray-700 dark:text-gray-300">Principal Amount (PHP)</Label>
-                                            <Input
-                                                id="principal_amount"
-                                                type="text"
-                                                value={formatNumberWithCommas(data.principal_amount as string || '')}
-                                                onChange={handlePrincipalAmountChange}
-                                                className="mt-1"
-                                                placeholder="Enter loan amount"
-                                            />
-                                            <InputError message={errors.principal_amount} className="mt-1" />
+                                    {/* Fees Section */}
+                                    <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Receipt className="h-5 w-5 text-blue-600" />
+                                                Fees
+                                            </h4>
+                                            <button
+                                                type="button"
+                                                onClick={addFee}
+                                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" />
+                                                Add Fee
+                                            </button>
                                         </div>
-                                    </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                                </div>
-                                    {/* Duration & Interest */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                            <Calendar className="h-5 w-5" />
-                                            Duration & Interest
-                                        </h4>
-
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div>
-                                                <Label htmlFor="loan_duration" className="text-sm font-medium text-gray-700 dark:text-gray-300">Duration</Label>
-                                                <Input
-                                                    id="loan_duration"
-                                                    type="number"
-                                                    min="1"
-                                                    max="60"
-                                                    value={data.loan_duration as string || ''}
-                                                    onChange={(e) => setData('loan_duration', e.target.value)}
-                                                    className="mt-1"
-                                                    placeholder="Duration"
-                                                />
-                                                <InputError message={errors.loan_duration} className="mt-1" />
-                                            </div>
-                                            <div>
-                                                <Label htmlFor="duration_period" className="text-sm font-medium text-gray-700 dark:text-gray-300">Period</Label>
-                                                <Select value={data.duration_period as string || ''} onValueChange={(value) => setData('duration_period', value)}>
-                                                    <SelectTrigger className="mt-1">
-                                                        <SelectValue />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="months">Months</SelectItem>
-                                                        <SelectItem value="years">Years</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                                <InputError message={errors.duration_period} className="mt-1" />
-                                            </div>
-                                        </div>
-
-                                        <div>
-                            <Label htmlFor="interest_rate" className="text-sm font-medium text-gray-700 dark:text-gray-300">Interest Rate (%)</Label>
-                            <Input
-                                id="interest_rate"
-                                type="number"
-                                min="0"
-                                max="100"
-                                step="0.01"
-                                value={data.interest_rate as string || ''}
-                                onChange={(e) => setData('interest_rate', e.target.value)}
-                                className="mt-1"
-                                placeholder="Interest rate (e.g., 5 for 5%)"
-                            />
-                            <InputError message={errors.interest_rate} className="mt-1" />
-                        </div>
-
-                        <div>
-                            <Label htmlFor="interest_method" className="text-sm font-medium text-gray-700 dark:text-gray-300">Interest Method</Label>
-                            <Select value={data.interest_method as string || ''} onValueChange={(value) => setData('interest_method', value)}>
-                                <SelectTrigger className="mt-1">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="flat_annual">Flat Annual Rate</SelectItem>
-                                    <SelectItem value="flat_one_time">Flat One-Time Rate</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                                {data.interest_method === 'flat_annual' && 
-                                    "Interest is calculated annually and applied proportionally to the loan duration"
-                                }
-                                {data.interest_method === 'flat_one_time' && 
-                                    "Interest is calculated once on the principal amount regardless of duration"
-                                }
-                            </div>
-                            <InputError message={errors.interest_method} className="mt-1" />
-                        </div>
-
-                                        <div>
-                                            <Label htmlFor="loan_release_date" className="text-sm font-medium text-gray-700 dark:text-gray-300">Loan Release Date</Label>
-                                            <Input
-                                                id="loan_release_date"
-                                                type="date"
-                                                value={data.loan_release_date as string || ''}
-                                                onChange={(e) => setData('loan_release_date', e.target.value)}
-                                                className="mt-1"
-                                                min={new Date().toISOString().split('T')[0]}
-                                            />
-                                            <InputError message={errors.loan_release_date} className="mt-1" />
-                                        </div>
-                                    </div>
-
-                                    {/* Additional Information */}
-                                    <div className="space-y-4">
-                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                                            <DollarSign className="h-5 w-5" />
-                                            Additional Information
-                                        </h4>
-
-                                        <div>
-                                            <Label htmlFor="purpose" className="text-sm font-medium text-gray-700 dark:text-gray-300">Loan Purpose</Label>
-                                            <Textarea
-                                                id="purpose"
-                                                value={data.purpose as string || ''}
-                                                onChange={(e) => setData('purpose', e.target.value)}
-                                                className="mt-1"
-                                                placeholder="Describe the purpose of this loan"
-                                                rows={3}
-                                            />
-                                            <InputError message={errors.purpose} className="mt-1" />
-                                        </div>
-
-
-
-                                        <div>
-                                            <Label htmlFor="notes" className="text-sm font-medium text-gray-700 dark:text-gray-300">Notes (Optional)</Label>
-                                            <Textarea
-                                                id="notes"
-                                                value={data.notes as string || ''}
-                                                onChange={(e) => setData('notes', e.target.value)}
-                                                className="mt-1"
-                                                placeholder="Additional notes or comments"
-                                                rows={3}
-                                            />
-                                            <InputError message={errors.notes} className="mt-1" />
-                                        </div>
-                                    </div>
-
-                                {/* Penalties Section */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                                            <AlertTriangle className="h-5 w-5 mr-2 text-yellow-600" />
-                                            Penalties
-                                        </h3>
-                                        <button
-                                            type="button"
-                                            onClick={addPenalty}
-                                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-yellow-700 bg-yellow-100 hover:bg-yellow-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-500"
-                                        >
-                                            <Plus className="h-4 w-4 mr-1" />
-                                            Add Penalty
-                                        </button>
-                                    </div>
-                                    
-                                    {(data.penalties as unknown as Penalty[]).map((penalty, index) => (
-                                        <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
-                                            <div className="flex justify-between items-center">
-                                                <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Penalty #{index + 1}</h4>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => removePenalty(index)}
-                                                    className="text-red-600 hover:text-red-800"
-                                                >
-                                                    <X className="h-4 w-4" />
-                                                </button>
-                                            </div>
-                                                
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    <div>
-                                                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Penalty Name
-                                                        </Label>
-                                                        <Input
-                                                            type="text"
-                                                            value={penalty.penalty_name}
-                                                            onChange={(e) => updatePenalty(index, 'penalty_name', e.target.value)}
-                                                            className="mt-1"
-                                                            placeholder="Late Payment Penalty"
-                                                        />
-                                                    </div>
-                                                    
-                                                    <div>
-                                                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Penalty Type
-                                                        </Label>
-                                                        <Select value={penalty.penalty_type} onValueChange={(value) => updatePenalty(index, 'penalty_type', value)}>
-                                                            <SelectTrigger className="mt-1">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="none">No Penalty</SelectItem>
-                                                                <SelectItem value="fixed">Fixed Amount</SelectItem>
-                                                            </SelectContent>
-                                                        </Select>
-                                                    </div>
-                                                    
-                                                    {penalty.penalty_type !== 'none' && (
-                                                        <>
-                                                            <div>
-                                                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                    Penalty Amount (₱)
-                                                                </Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    step="0.01"
-                                                                    value={penalty.penalty_rate}
-                                                                    onChange={(e) => updatePenalty(index, 'penalty_rate', e.target.value)}
-                                                                    className="mt-1"
-                                                                    placeholder="100.00"
-                                                                />
-                                                            </div>
-                                                            
-                                                            <div>
-                                                                <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                                    Grace Period (Days)
-                                                                </Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    value={penalty.grace_period_days}
-                                                                    onChange={(e) => updatePenalty(index, 'grace_period_days', e.target.value)}
-                                                                    className="mt-1"
-                                                                    placeholder="7"
-                                                                />
-                                                            </div>
-
-                                                        </>
-                                                    )}
-                                                    
-                                                    <div className="md:col-span-2">
-                                                        <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                            Description
-                                                        </Label>
-                                                        <Textarea
-                                                            value={penalty.description}
-                                                            onChange={(e) => updatePenalty(index, 'description', e.target.value)}
-                                                            className="mt-1"
-                                                            placeholder="Penalty description..."
-                                                            rows={2}
-                                                        />
-                                                    </div>
-                                                </div>
-                                                
-                                                {penalty.penalty_type !== 'none' && (
-                                                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
-                                                        <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                                                            <strong>Penalty Preview:</strong> ₱{penalty.penalty_rate} fixed penalty per month overdue after {penalty.grace_period_days} days grace period
-                                                        </p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                {/* Fees Section */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                                            <Receipt className="h-5 w-5 mr-2 text-blue-600" />
-                                            Fees
-                                        </h3>
-                                        <button
-                                            type="button"
-                                            onClick={addFee}
-                                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                                        >
-                                            <Plus className="h-4 w-4 mr-1" />
-                                            Add Fee
-                                        </button>
-                                    </div>
                                     
                                     {(data.fees as unknown as Fee[]).map((fee, index) => (
                                         <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
@@ -1602,24 +1569,136 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                     ))}
                                 </div>
 
-
-
-                                {/* Collateral Section */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium text-gray-900 dark:text-white flex items-center">
-                                            <Shield className="h-5 w-5 mr-2 text-green-600" />
-                                            Collateral
-                                        </h3>
+                                {/* Penalty Section */}
+                                <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                            <AlertTriangle className="h-5 w-5 text-orange-500" />
+                                            Penalty Configuration
+                                        </h4>
                                         <button
                                             type="button"
-                                            onClick={addCollateral}
-                                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                            onClick={addPenalty}
+                                            className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-orange-700 bg-orange-100 hover:bg-orange-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                                         >
                                             <Plus className="h-4 w-4 mr-1" />
-                                            Add Collateral
+                                            Add Penalty
                                         </button>
                                     </div>
+
+                                    {(data.penalties as unknown as Penalty[]).map((penalty, index) => (
+                                        <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">
+                                            <div className="flex justify-between items-center">
+                                                <h4 className="text-md font-medium text-gray-700 dark:text-gray-300">Penalty #{index + 1}</h4>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removePenalty(index)}
+                                                    className="text-red-600 hover:text-red-800"
+                                                >
+                                                    <X className="h-4 w-4" />
+                                                </button>
+                                            </div>
+
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <Label htmlFor={`penalty_name_${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Penalty Name
+                                                    </Label>
+                                                    <Input
+                                                        id={`penalty_name_${index}`}
+                                                        type="text"
+                                                        value={penalty.penalty_name}
+                                                        onChange={(e) => updatePenalty(index, 'penalty_name', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="e.g., Late Payment Penalty"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor={`penalty_type_${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Penalty Type
+                                                    </Label>
+                                                    <Select
+                                                        value={penalty.penalty_type}
+                                                        onValueChange={(value) => updatePenalty(index, 'penalty_type', value)}
+                                                    >
+                                                        <SelectTrigger className="mt-1">
+                                                            <SelectValue placeholder="Select penalty type" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="fixed">Fixed Amount</SelectItem>
+                                                            <SelectItem value="none">No Penalty</SelectItem>
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor={`penalty_rate_${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Penalty Amount (₱)
+                                                    </Label>
+                                                    <Input
+                                                        id={`penalty_rate_${index}`}
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={penalty.penalty_rate}
+                                                        onChange={(e) => updatePenalty(index, 'penalty_rate', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="100.00"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <Label htmlFor={`grace_period_${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Grace Period (Days)
+                                                    </Label>
+                                                    <Input
+                                                        id={`grace_period_${index}`}
+                                                        type="number"
+                                                        min="0"
+                                                        value={penalty.grace_period_days}
+                                                        onChange={(e) => updatePenalty(index, 'grace_period_days', e.target.value)}
+                                                        className="mt-1"
+                                                        placeholder="7"
+                                                    />
+                                                </div>
+
+
+
+                                                <div className="md:col-span-2">
+                                                    <Label htmlFor={`penalty_description_${index}`} className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                        Description (Optional)
+                                                    </Label>
+                                                    <Textarea
+                                                        id={`penalty_description_${index}`}
+                                                        value={penalty.description}
+                                                        onChange={(e) => updatePenalty(index, 'description', e.target.value)}
+                                                        className="mt-1"
+                                                        rows={3}
+                                                        placeholder="Additional notes about this penalty..."
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                    {/* Collateral Section */}
+                                    <div className="bg-white dark:bg-gray-700 rounded-lg p-4">
+                                        <div className="flex items-center justify-between mb-4">
+                                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                                                <Shield className="h-5 w-5 text-green-600" />
+                                                Collateral
+                                            </h4>
+                                            <button
+                                                type="button"
+                                                onClick={addCollateral}
+                                                className="inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" />
+                                                Add Collateral
+                                            </button>
+                                        </div>
                                     
                                     {(data.collaterals as unknown as Collateral[]).map((collateral, index) => (
                                         <div key={index} className="border border-gray-200 dark:border-gray-600 rounded-lg p-4 space-y-4">

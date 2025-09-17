@@ -71,7 +71,7 @@ class LoanController extends Controller
         ];
 
         // Add vehicle information validation for car and motorcycle loans
-        if (in_array($request->loan_type, ['car', 'motorcycle'])) {
+        if (in_array($request->loan_type, ['vehicle', 'motorcycle'])) {
             $validationRules = array_merge($validationRules, [
                 'vehicle_make' => 'required|string|max:255',
                 'vehicle_model' => 'required|string|max:255',
@@ -95,6 +95,8 @@ class LoanController extends Controller
                 'certificate_number' => 'nullable|string|max:255',
                 'year_purchased' => 'nullable|integer|min:1900|max:' . date('Y'),
                 'year_released' => 'nullable|integer|min:1900|max:' . date('Y'),
+                'proof_of_authenticity' => 'nullable|string|max:255',
+                'receipt_upload' => 'nullable|string|max:255',
             ]);
         }
 
@@ -104,12 +106,17 @@ class LoanController extends Controller
                 'gadget_type' => 'required|string|max:255',
                 'gadget_brand' => 'required|string|max:255',
                 'gadget_model' => 'required|string|max:255',
+                'model_series' => 'nullable|string|max:255',
                 'specifications' => 'nullable|string|max:500',
                 'gadget_serial_number' => 'nullable|string|max:255',
+                'imei' => 'nullable|string|max:255',
+                'color_variant' => 'nullable|string|max:255',
                 'gadget_color' => 'nullable|string|max:255',
                 'gadget_year_purchased' => 'nullable|integer|min:1990|max:' . date('Y'),
                 'gadget_year_released' => 'nullable|integer|min:1990|max:' . date('Y'),
                 'warranty_details' => 'nullable|string|max:500',
+                'proof_of_purchase' => 'nullable|string|max:255',
+                'gadget_receipt_upload' => 'nullable|string|max:255',
             ]);
         }
 
@@ -177,7 +184,7 @@ class LoanController extends Controller
             $loan->save();
 
             // Store vehicle information for car and motorcycle loans
-            if (in_array($request->loan_type, ['car', 'motorcycle'])) {
+            if (in_array($request->loan_type, ['vehicle', 'motorcycle'])) {
                 \App\Models\VehicleInfo::create([
                     'loan_id' => $loan->id,
                     'vehicle_type' => $request->loan_type,
@@ -204,6 +211,8 @@ class LoanController extends Controller
                     'certificate_number' => $request->certificate_number,
                     'year_purchased' => $request->year_purchased,
                     'year_released' => $request->year_released,
+                    'proof_of_authenticity' => $request->proof_of_authenticity,
+                    'receipt_upload' => $request->receipt_upload,
                 ]);
             }
 
@@ -214,12 +223,17 @@ class LoanController extends Controller
                     'gadget_type' => $request->gadget_type,
                     'brand' => $request->gadget_brand,
                     'model' => $request->gadget_model,
+                    'model_series' => $request->model_series,
                     'specifications' => $request->specifications,
                     'serial_number' => $request->gadget_serial_number,
+                    'imei' => $request->imei,
+                    'color_variant' => $request->color_variant,
                     'color' => $request->gadget_color,
                     'year_purchased' => $request->gadget_year_purchased,
                     'year_released' => $request->gadget_year_released,
                     'warranty_details' => $request->warranty_details,
+                    'proof_of_purchase' => $request->proof_of_purchase,
+                    'receipt_upload' => $request->gadget_receipt_upload,
                 ]);
             }
 
@@ -281,8 +295,19 @@ class LoanController extends Controller
     public function show(Loan $loan)
     {
         $loan->load(['borrower', 'fees', 'collaterals', 'payments.processedBy', 'vehicleInfo', 'luxuryInfo', 'gadgetInfo']);
+        
         return Inertia::render('loans/show', [
-            'loan' => $loan
+            'loan' => array_merge($loan->toArray(), [
+                'luxuryInfo' => $loan->luxuryInfo,
+                'gadgetInfo' => $loan->gadgetInfo,
+                'vehicleInfo' => $loan->vehicleInfo->map(function ($vehicle) {
+                    return array_merge($vehicle->toArray(), [
+                        'vehicle_make' => $vehicle->make,
+                        'vehicle_model' => $vehicle->model,
+                        'vehicle_type' => $vehicle->type,
+                    ]);
+                }),
+            ])
         ]);
     }
 
