@@ -164,16 +164,20 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    
+    // Validation state management
+    const [fieldErrors, setFieldErrors] = useState<Record<string, boolean>>({});
+    const [touchedFields, setTouchedFields] = useState<Record<string, boolean>>({});
 
     const { data, setData, post, processing, errors, reset } = useForm({
         borrower_id: '',
         principal_amount: '',
         loan_duration: '',
-        duration_period: 'months',
+        duration_period: '',
         loan_release_date: '',
         interest_rate: '',
-        interest_method: 'flat_annual',
-        loan_type: 'personal',
+        interest_method: '',
+        loan_type: '',
         purpose: '',
         notes: '',
         fees: [] as Fee[],
@@ -229,29 +233,36 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
         const inputValue = e.target.value;
         // Remove commas for the actual value
         const numericValue = inputValue.replace(/,/g, '');
-        // Update form data with numeric value (no commas)
-        setData('principal_amount', numericValue);
+        // Update form data with numeric value (no commas) and validate
+        handleFieldChange('principal_amount', numericValue);
     };
 
     // Fee management functions
     const addFee = () => {
         const newFee: Fee = {
-            fee_type: 'processing',
-            calculate_fee_on: 'principal_amount',
+            fee_type: '',
+            calculate_fee_on: '',
             fixed_amount: ''
         };
-        setData('fees', [...(data.fees as unknown as Fee[]), newFee]);
+        handleFieldChange('fees', [...(data.fees as unknown as Fee[]), newFee]);
     };
 
     const removeFee = (index: number) => {
         const newFees = (data.fees as unknown as Fee[]).filter((_, i) => i !== index);
-        setData('fees', newFees);
+        handleFieldChange('fees', newFees);
     };
 
     const updateFee = (index: number, field: keyof Fee, value: string) => {
         const newFees = [...(data.fees as unknown as Fee[])];
         newFees[index] = { ...newFees[index], [field]: value };
-        setData('fees', newFees);
+        
+        // Validate individual field
+        const fieldName = `fees.${index}.${field}`;
+        const isValid = value.trim() !== '';
+        setFieldErrors(prev => ({ ...prev, [fieldName]: !isValid }));
+        setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+        
+        handleFieldChange('fees', newFees);
     };
 
 
@@ -263,42 +274,56 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
             description: '',
             defects: ''
         };
-        setData('collaterals', [...(data.collaterals as unknown as Collateral[]), newCollateral]);
+        handleFieldChange('collaterals', [...(data.collaterals as unknown as Collateral[]), newCollateral]);
     };
 
     const removeCollateral = (index: number) => {
         const newCollaterals = (data.collaterals as unknown as Collateral[]).filter((_, i) => i !== index);
-        setData('collaterals', newCollaterals);
+        handleFieldChange('collaterals', newCollaterals);
     };
 
     const updateCollateral = (index: number, field: keyof Collateral, value: string) => {
         const newCollaterals = [...(data.collaterals as unknown as Collateral[])];
         newCollaterals[index] = { ...newCollaterals[index], [field]: value };
-        setData('collaterals', newCollaterals);
+        
+        // Validate individual field
+        const fieldName = `collaterals.${index}.${field}`;
+        const isValid = value.trim() !== '';
+        setFieldErrors(prev => ({ ...prev, [fieldName]: !isValid }));
+        setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+        
+        handleFieldChange('collaterals', newCollaterals);
     };
 
     // Penalty management functions
     const addPenalty = () => {
         const newPenalty: Penalty = {
-            penalty_type: 'fixed',
-            penalty_rate: '100.00',
-            grace_period_days: '7',
-            penalty_calculation_base: 'monthly_payment',
-            penalty_name: 'Late Payment Penalty',
+            penalty_type: '',
+            penalty_rate: '',
+            grace_period_days: '',
+            penalty_calculation_base: '',
+            penalty_name: '',
             description: ''
         };
-        setData('penalties', [...(data.penalties as unknown as Penalty[]), newPenalty]);
+        handleFieldChange('penalties', [...(data.penalties as unknown as Penalty[]), newPenalty]);
     };
 
     const removePenalty = (index: number) => {
         const newPenalties = (data.penalties as unknown as Penalty[]).filter((_, i) => i !== index);
-        setData('penalties', newPenalties);
+        handleFieldChange('penalties', newPenalties);
     };
 
     const updatePenalty = (index: number, field: keyof Penalty, value: string) => {
         const newPenalties = [...(data.penalties as unknown as Penalty[])];
         newPenalties[index] = { ...newPenalties[index], [field]: value };
-        setData('penalties', newPenalties);
+        
+        // Validate individual field
+        const fieldName = `penalties.${index}.${field}`;
+        const isValid = value.trim() !== '';
+        setFieldErrors(prev => ({ ...prev, [fieldName]: !isValid }));
+        setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+        
+        handleFieldChange('penalties', newPenalties);
     };
 
     // File upload state for collaterals
@@ -325,6 +350,103 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
             }
             return newFiles;
         });
+    };
+
+    // Validation functions
+    const getRequiredFields = () => {
+        const baseRequiredFields = [
+            'borrower_id',
+            'loan_type',
+            'principal_amount',
+            'loan_duration',
+            'duration_period',
+            'loan_release_date',
+            'interest_rate',
+            'interest_method'
+        ];
+
+        // Add conditional required fields based on loan type
+        const conditionalFields: string[] = [];
+        
+        if (data.loan_type === 'vehicle' || data.loan_type === 'motorcycle') {
+            conditionalFields.push(
+                'vehicle_make',
+                'vehicle_model',
+                'vehicle_type',
+                'year_of_manufacture',
+                'color',
+                'plate_number',
+                'chassis_number',
+                'engine_number'
+            );
+        } else if (data.loan_type === 'luxuries') {
+            conditionalFields.push(
+                'item_type',
+                'luxury_brand',
+                'model_collection_name',
+                'material',
+                'serial_number',
+                'year_purchased'
+            );
+        } else if (data.loan_type === 'gadgets') {
+            conditionalFields.push(
+                'gadget_type',
+                'gadget_brand',
+                'gadget_model',
+                'model_series',
+                'specifications',
+                'gadget_serial_number',
+                'color_variant',
+                'gadget_color',
+                'gadget_year_purchased'
+            );
+        }
+
+        return [...baseRequiredFields, ...conditionalFields];
+    };
+
+    const validateField = (fieldName: string, value: any): boolean => {
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
+            return false;
+        }
+        return true;
+    };
+
+    const validateAllRequiredFields = (): boolean => {
+        const requiredFields = getRequiredFields();
+        const newFieldErrors: Record<string, boolean> = {};
+        let hasErrors = false;
+
+        requiredFields.forEach(field => {
+            const isValid = validateField(field, data[field as keyof typeof data]);
+            newFieldErrors[field] = !isValid;
+            if (!isValid) {
+                hasErrors = true;
+            }
+        });
+
+        setFieldErrors(newFieldErrors);
+        return !hasErrors;
+    };
+
+    const handleFieldChange = (fieldName: string, value: any) => {
+        setData(fieldName as any, value);
+        
+        // Mark field as touched
+        setTouchedFields(prev => ({ ...prev, [fieldName]: true }));
+        
+        // Validate field if it's been touched
+        if (touchedFields[fieldName] || fieldErrors[fieldName]) {
+            const isValid = validateField(fieldName, value);
+            setFieldErrors(prev => ({ ...prev, [fieldName]: !isValid }));
+        }
+    };
+
+    const getFieldClassName = (fieldName: string, baseClassName: string = "mt-1"): string => {
+        const hasError = fieldErrors[fieldName] && touchedFields[fieldName];
+        return hasError 
+            ? `${baseClassName} border-red-500 focus:border-red-500 focus:ring-red-500` 
+            : baseClassName;
     };
 
     const filteredLoans = useMemo(() => {
@@ -362,7 +484,100 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        setIsConfirmModalOpen(true);
+        
+        // Validate all required fields
+        const isValid = validateAllRequiredFields();
+        
+        // Mark all required fields as touched to show validation errors
+        const requiredFields = getRequiredFields();
+        const newTouchedFields: Record<string, boolean> = {};
+        requiredFields.forEach(field => {
+            newTouchedFields[field] = true;
+        });
+        
+        // Validate and mark fee fields as touched
+        let feeValidationErrors: Record<string, boolean> = {};
+        if (data.fees && Array.isArray(data.fees)) {
+            data.fees.forEach((fee, index) => {
+                // Validate fee_type
+                const feeTypeFieldName = `fees.${index}.fee_type`;
+                const isValidFeeType = fee.fee_type && fee.fee_type.trim() !== '';
+                feeValidationErrors[feeTypeFieldName] = !isValidFeeType;
+                newTouchedFields[feeTypeFieldName] = true;
+                
+                // Validate calculate_fee_on
+                const calculateFeeOnFieldName = `fees.${index}.calculate_fee_on`;
+                const isValidCalculateFeeOn = fee.calculate_fee_on && fee.calculate_fee_on.trim() !== '';
+                feeValidationErrors[calculateFeeOnFieldName] = !isValidCalculateFeeOn;
+                newTouchedFields[calculateFeeOnFieldName] = true;
+                
+                // Validate fixed_amount
+                const fixedAmountFieldName = `fees.${index}.fixed_amount`;
+                const isValidFixedAmount = fee.fixed_amount && fee.fixed_amount.trim() !== '';
+                feeValidationErrors[fixedAmountFieldName] = !isValidFixedAmount;
+                newTouchedFields[fixedAmountFieldName] = true;
+            });
+        }
+        
+        // Validate and mark penalty fields as touched
+        let penaltyValidationErrors: Record<string, boolean> = {};
+        if (data.penalties && Array.isArray(data.penalties)) {
+            data.penalties.forEach((penalty, index) => {
+                // Validate penalty_name
+                const penaltyNameFieldName = `penalties.${index}.penalty_name`;
+                const isValidPenaltyName = penalty.penalty_name && penalty.penalty_name.trim() !== '';
+                penaltyValidationErrors[penaltyNameFieldName] = !isValidPenaltyName;
+                newTouchedFields[penaltyNameFieldName] = true;
+                
+                // Validate penalty_type
+                const penaltyTypeFieldName = `penalties.${index}.penalty_type`;
+                const isValidPenaltyType = penalty.penalty_type && penalty.penalty_type.trim() !== '';
+                penaltyValidationErrors[penaltyTypeFieldName] = !isValidPenaltyType;
+                newTouchedFields[penaltyTypeFieldName] = true;
+                
+                // Validate penalty_rate
+                const penaltyRateFieldName = `penalties.${index}.penalty_rate`;
+                const isValidPenaltyRate = penalty.penalty_rate && penalty.penalty_rate.trim() !== '';
+                penaltyValidationErrors[penaltyRateFieldName] = !isValidPenaltyRate;
+                newTouchedFields[penaltyRateFieldName] = true;
+                
+                // Validate grace_period_days
+                const gracePeriodFieldName = `penalties.${index}.grace_period_days`;
+                const isValidGracePeriod = penalty.grace_period_days && penalty.grace_period_days.trim() !== '';
+                penaltyValidationErrors[gracePeriodFieldName] = !isValidGracePeriod;
+                newTouchedFields[gracePeriodFieldName] = true;
+            });
+        }
+        
+        // Validate and mark collateral fields as touched
+        let collateralValidationErrors: Record<string, boolean> = {};
+        if (data.collaterals && Array.isArray(data.collaterals)) {
+            data.collaterals.forEach((collateral, index) => {
+                // Validate collateral name
+                const collateralNameFieldName = `collaterals.${index}.name`;
+                const isValidCollateralName = collateral.name && collateral.name.trim() !== '';
+                collateralValidationErrors[collateralNameFieldName] = !isValidCollateralName;
+                newTouchedFields[collateralNameFieldName] = true;
+                
+                // Validate collateral description
+                const collateralDescriptionFieldName = `collaterals.${index}.description`;
+                const isValidCollateralDescription = collateral.description && collateral.description.trim() !== '';
+                collateralValidationErrors[collateralDescriptionFieldName] = !isValidCollateralDescription;
+                newTouchedFields[collateralDescriptionFieldName] = true;
+            });
+        }
+        
+        setTouchedFields(prev => ({ ...prev, ...newTouchedFields }));
+        setFieldErrors(prev => ({ ...prev, ...feeValidationErrors, ...penaltyValidationErrors, ...collateralValidationErrors }));
+        
+        // Check if there are any fee, penalty, or collateral validation errors
+        const hasFeeErrors = Object.values(feeValidationErrors).some(hasError => hasError);
+        const hasPenaltyErrors = Object.values(penaltyValidationErrors).some(hasError => hasError);
+        const hasCollateralErrors = Object.values(collateralValidationErrors).some(hasError => hasError);
+        
+        if (isValid && !hasFeeErrors && !hasPenaltyErrors && !hasCollateralErrors) {
+            setIsConfirmModalOpen(true);
+        }
     };
 
     const handleConfirmSubmit = () => {
@@ -807,8 +1022,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                             <Label htmlFor="borrower_id" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                 Borrower *
                                             </Label>
-                                            <Select value={data.borrower_id as string || ''} onValueChange={(value) => setData('borrower_id', value)}>
-                                                <SelectTrigger className="mt-1">
+                                            <Select value={data.borrower_id as string || ''} onValueChange={(value) => handleFieldChange('borrower_id', value)}>
+                                                <SelectTrigger className={getFieldClassName('borrower_id')}>
                                                     <SelectValue placeholder="Select a borrower" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -826,8 +1041,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                             <Label htmlFor="loan_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                 Loan Type *
                                             </Label>
-                                            <Select value={data.loan_type as string || ''} onValueChange={(value) => setData('loan_type', value)}>
-                                                <SelectTrigger className="mt-1">
+                                            <Select value={data.loan_type as string || ''} onValueChange={(value) => handleFieldChange('loan_type', value)}>
+                                                <SelectTrigger className={getFieldClassName('loan_type')}>
                                                     <SelectValue placeholder="Select loan type" />
                                                 </SelectTrigger>
                                                 <SelectContent>
@@ -866,7 +1081,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     type="text"
                                                     value={formatNumberWithCommas(data.principal_amount as string || '')}
                                                     onChange={handlePrincipalAmountChange}
-                                                    className="mt-1"
+                                                    className={getFieldClassName('principal_amount')}
                                                     placeholder="Enter loan amount"
                                                 />
                                                 <InputError message={errors.principal_amount} className="mt-1" />
@@ -879,12 +1094,10 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     </Label>
                                                     <Input
                                                         id="loan_duration"
-                                                        type="number"
-                                                        min="1"
-                                                        max="60"
+                                                        type="text"
                                                         value={data.loan_duration as string || ''}
-                                                        onChange={(e) => setData('loan_duration', e.target.value)}
-                                                        className="mt-1"
+                                                        onChange={(e) => handleFieldChange('loan_duration', e.target.value)}
+                                                        className={getFieldClassName('loan_duration')}
                                                         placeholder="Duration"
                                                     />
                                                     <InputError message={errors.loan_duration} className="mt-1" />
@@ -893,8 +1106,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     <Label htmlFor="duration_period" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                         Period *
                                                     </Label>
-                                                    <Select value={data.duration_period as string || ''} onValueChange={(value) => setData('duration_period', value)}>
-                                                        <SelectTrigger className="mt-1">
+                                                    <Select value={data.duration_period as string || ''} onValueChange={(value) => handleFieldChange('duration_period', value)}>
+                                                        <SelectTrigger className={getFieldClassName('duration_period')}>
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -914,8 +1127,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     id="loan_release_date"
                                                     type="date"
                                                     value={data.loan_release_date as string || ''}
-                                                    onChange={(e) => setData('loan_release_date', e.target.value)}
-                                                    className="mt-1"
+                                                    onChange={(e) => handleFieldChange('loan_release_date', e.target.value)}
+                                                    className={getFieldClassName('loan_release_date')}
                                                     min={new Date().toISOString().split('T')[0]}
                                                 />
                                                 <InputError message={errors.loan_release_date} className="mt-1" />
@@ -929,13 +1142,10 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 </Label>
                                                 <Input
                                                     id="interest_rate"
-                                                    type="number"
-                                                    min="0"
-                                                    max="100"
-                                                    step="0.01"
+                                                    type="text"
                                                     value={data.interest_rate as string || ''}
-                                                    onChange={(e) => setData('interest_rate', e.target.value)}
-                                                    className="mt-1"
+                                                    onChange={(e) => handleFieldChange('interest_rate', e.target.value)}
+                                                    className={getFieldClassName('interest_rate')}
                                                     placeholder="Interest rate (e.g., 5 for 5%)"
                                                 />
                                                 <InputError message={errors.interest_rate} className="mt-1" />
@@ -945,8 +1155,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 <Label htmlFor="interest_method" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                     Interest Method *
                                                 </Label>
-                                                <Select value={data.interest_method as string || ''} onValueChange={(value) => setData('interest_method', value)}>
-                                                    <SelectTrigger className="mt-1">
+                                                <Select value={data.interest_method as string || ''} onValueChange={(value) => handleFieldChange('interest_method', value)}>
+                                                    <SelectTrigger className={getFieldClassName('interest_method')}>
                                                         <SelectValue />
                                                     </SelectTrigger>
                                                     <SelectContent>
@@ -972,8 +1182,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 <Textarea
                                                     id="purpose"
                                                     value={data.purpose as string || ''}
-                                                    onChange={(e) => setData('purpose', e.target.value)}
-                                                    className="mt-1"
+                                                    onChange={(e) => handleFieldChange('purpose', e.target.value)}
+                                                    className={getFieldClassName('purpose')}
                                                     placeholder="Describe the purpose of this loan"
                                                     rows={3}
                                                 />
@@ -987,8 +1197,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                 <Textarea
                                                     id="notes"
                                                     value={data.notes as string || ''}
-                                                    onChange={(e) => setData('notes', e.target.value)}
-                                                    className="mt-1"
+                                                    onChange={(e) => handleFieldChange('notes', e.target.value)}
+                                                    className={getFieldClassName('notes')}
                                                     placeholder="Additional notes or comments"
                                                     rows={2}
                                                 />
@@ -1039,8 +1249,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="vehicle_make"
                                                             type="text"
                                                             value={data.vehicle_make as string || ''}
-                                                            onChange={(e) => setData('vehicle_make', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('vehicle_make', e.target.value)}
+                                                            className={getFieldClassName('vehicle_make')}
                                                             placeholder="e.g., Toyota, Honda"
                                                         />
                                                         <InputError message={errors.vehicle_make} className="mt-1" />
@@ -1054,8 +1264,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="vehicle_model"
                                                             type="text"
                                                             value={data.vehicle_model as string || ''}
-                                                            onChange={(e) => setData('vehicle_model', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('vehicle_model', e.target.value)}
+                                                            className={getFieldClassName('vehicle_model')}
                                                             placeholder="e.g., Vios, Civic"
                                                         />
                                                         <InputError message={errors.vehicle_model} className="mt-1" />
@@ -1069,8 +1279,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="vehicle_type"
                                                             type="text"
                                                             value={data.vehicle_type as string || ''}
-                                                            onChange={(e) => setData('vehicle_type', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('vehicle_type', e.target.value)}
+                                                            className={getFieldClassName('vehicle_type')}
                                                             placeholder={data.loan_type === 'vehicle' ? 'e.g., Sedan, SUV, Truck' : data.loan_type === 'motorcycle' ? 'e.g., Sport, Cruiser, Scooter' : ''}
                                                         />
                                                         <InputError message={errors.vehicle_type} className="mt-1" />
@@ -1080,13 +1290,11 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         <Label htmlFor="year_of_manufacture" className="text-sm font-medium text-gray-700 dark:text-gray-300">Year of Manufacture</Label>
                                                         <Input
                                                             id="year_of_manufacture"
-                                                            type="number"
+                                                            type="text"
                                                             value={data.year_of_manufacture as string || ''}
-                                                            onChange={(e) => setData('year_of_manufacture', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('year_of_manufacture', e.target.value)}
+                                                            className={getFieldClassName('year_of_manufacture')}
                                                             placeholder="e.g., 2020"
-                                                            min="1900"
-                                                            max={new Date().getFullYear()}
                                                         />
                                                         <InputError message={errors.year_of_manufacture} className="mt-1" />
                                                     </div>
@@ -1097,8 +1305,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="color"
                                                             type="text"
                                                             value={data.color as string || ''}
-                                                            onChange={(e) => setData('color', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('color', e.target.value)}
+                                                            className={getFieldClassName('color')}
                                                             placeholder="e.g., White, Black, Red"
                                                         />
                                                         <InputError message={errors.color} className="mt-1" />
@@ -1110,8 +1318,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="plate_number"
                                                             type="text"
                                                             value={data.plate_number as string || ''}
-                                                            onChange={(e) => setData('plate_number', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('plate_number', e.target.value)}
+                                                            className={getFieldClassName('plate_number')}
                                                             placeholder="e.g., ABC-1234"
                                                         />
                                                         <InputError message={errors.plate_number} className="mt-1" />
@@ -1123,8 +1331,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="chassis_number"
                                                             type="text"
                                                             value={data.chassis_number as string || ''}
-                                                            onChange={(e) => setData('chassis_number', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('chassis_number', e.target.value)}
+                                                            className={getFieldClassName('chassis_number')}
                                                             placeholder="Vehicle Identification Number"
                                                         />
                                                         <InputError message={errors.chassis_number} className="mt-1" />
@@ -1136,8 +1344,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="engine_number"
                                                             type="text"
                                                             value={data.engine_number as string || ''}
-                                                            onChange={(e) => setData('engine_number', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('engine_number', e.target.value)}
+                                                            className={getFieldClassName('engine_number')}
                                                             placeholder="Engine identification number"
                                                         />
                                                         <InputError message={errors.engine_number} className="mt-1" />
@@ -1159,8 +1367,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         <Label htmlFor="item_type" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                                                             Item Type
                                                         </Label>
-                                                        <Select value={data.item_type as string || ''} onValueChange={(value) => setData('item_type', value)}>
-                                                            <SelectTrigger className="mt-1">
+                                                        <Select value={data.item_type as string || ''} onValueChange={(value) => handleFieldChange('item_type', value)}>
+                                                            <SelectTrigger className={getFieldClassName('item_type')}>
                                                                 <SelectValue placeholder="Select item type" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -1183,8 +1391,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="luxury_brand"
                                                             type="text"
                                                             value={data.luxury_brand as string || ''}
-                                                            onChange={(e) => setData('luxury_brand', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('luxury_brand', e.target.value)}
+                                                            className={getFieldClassName('luxury_brand')}
                                                             placeholder="e.g., Rolex, Cartier, LV, Gucci"
                                                         />
                                                         <InputError message={errors.luxury_brand} className="mt-1" />
@@ -1198,8 +1406,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="model_collection_name"
                                                             type="text"
                                                             value={data.model_collection_name as string || ''}
-                                                            onChange={(e) => setData('model_collection_name', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('model_collection_name', e.target.value)}
+                                                            className={getFieldClassName('model_collection_name')}
                                                             placeholder="e.g., Submariner, Neverfull"
                                                         />
                                                         <InputError message={errors.model_collection_name} className="mt-1" />
@@ -1213,8 +1421,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="material"
                                                             type="text"
                                                             value={data.material as string || ''}
-                                                            onChange={(e) => setData('material', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('material', e.target.value)}
+                                                            className={getFieldClassName('material')}
                                                             placeholder="e.g., Gold, Diamond, Leather"
                                                         />
                                                         <InputError message={errors.material} className="mt-1" />
@@ -1228,8 +1436,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="serial_number"
                                                             type="text"
                                                             value={data.serial_number as string || ''}
-                                                            onChange={(e) => setData('serial_number', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('serial_number', e.target.value)}
+                                                            className={getFieldClassName('serial_number')}
                                                             placeholder="Item serial number"
                                                         />
                                                         <InputError message={errors.serial_number} className="mt-1" />
@@ -1243,8 +1451,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="certificate_number"
                                                             type="text"
                                                             value={data.certificate_number as string || ''}
-                                                            onChange={(e) => setData('certificate_number', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('certificate_number', e.target.value)}
+                                                            className={getFieldClassName('certificate_number')}
                                                             placeholder="Certificate/authenticity number"
                                                         />
                                                         <InputError message={errors.certificate_number} className="mt-1" />
@@ -1256,13 +1464,11 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         </Label>
                                                         <Input
                                                             id="year_purchased"
-                                                            type="number"
+                                                            type="text"
                                                             value={data.year_purchased as string || ''}
-                                                            onChange={(e) => setData('year_purchased', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('year_purchased', e.target.value)}
+                                                            className={getFieldClassName('year_purchased')}
                                                             placeholder="e.g., 2020"
-                                                            min="1900"
-                                                            max={new Date().getFullYear()}
                                                         />
                                                         <InputError message={errors.year_purchased} className="mt-1" />
                                                     </div>
@@ -1273,13 +1479,11 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         </Label>
                                                         <Input
                                                             id="year_released"
-                                                            type="number"
+                                                            type="text"
                                                             value={data.year_released as string || ''}
-                                                            onChange={(e) => setData('year_released', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('year_released', e.target.value)}
+                                                            className={getFieldClassName('year_released')}
                                                             placeholder="e.g., 2019"
-                                                            min="1900"
-                                                            max={new Date().getFullYear()}
                                                         />
                                                         <InputError message={errors.year_released} className="mt-1" />
                                                     </div>
@@ -1304,8 +1508,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         id="gadget_type"
                                                         type="text"
                                                         value={data.gadget_type as string || ''}
-                                                        onChange={(e) => setData('gadget_type', e.target.value)}
-                                                        className="mt-1"
+                                                        onChange={(e) => handleFieldChange('gadget_type', e.target.value)}
+                                                        className={getFieldClassName('gadget_type')}
                                                         placeholder="e.g., Smartphone, Laptop, Tablet, Camera"
                                                         required
                                                     />
@@ -1320,8 +1524,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         id="gadget_brand"
                                                         type="text"
                                                         value={data.gadget_brand as string || ''}
-                                                        onChange={(e) => setData('gadget_brand', e.target.value)}
-                                                        className="mt-1"
+                                                        onChange={(e) => handleFieldChange('gadget_brand', e.target.value)}
+                                                        className={getFieldClassName('gadget_brand')}
                                                         placeholder="e.g., Apple, Samsung, Sony, Dell"
                                                         required
                                                     />
@@ -1336,8 +1540,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         id="gadget_model"
                                                         type="text"
                                                         value={data.gadget_model as string || ''}
-                                                        onChange={(e) => setData('gadget_model', e.target.value)}
-                                                        className="mt-1"
+                                                        onChange={(e) => handleFieldChange('gadget_model', e.target.value)}
+                                                        className={getFieldClassName('gadget_model')}
                                                         placeholder="e.g., iPhone 16 Pro Max, PS5, MacBook Air M3"
                                                         required
                                                     />
@@ -1352,8 +1556,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         id="model_series"
                                                         type="text"
                                                         value={data.model_series as string || ''}
-                                                        onChange={(e) => setData('model_series', e.target.value)}
-                                                        className="mt-1"
+                                                        onChange={(e) => handleFieldChange('model_series', e.target.value)}
+                                                        className={getFieldClassName('model_series')}
                                                         placeholder="e.g., Pro Max, Gaming Edition, M3"
                                                     />
                                                     <InputError message={errors.model_series} className="mt-1" />
@@ -1367,8 +1571,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="specifications"
                                                             type="text"
                                                             value={data.specifications as string || ''}
-                                                            onChange={(e) => setData('specifications', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('specifications', e.target.value)}
+                                                            className={getFieldClassName('specifications')}
                                                             placeholder="e.g., 8GB RAM, 256GB Storage, M3 Processor"
                                                         />
                                                         <InputError message={errors.specifications} className="mt-1" />
@@ -1382,8 +1586,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="gadget_serial_number"
                                                             type="text"
                                                             value={data.gadget_serial_number as string || ''}
-                                                            onChange={(e) => setData('gadget_serial_number', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('gadget_serial_number', e.target.value)}
+                                                            className={getFieldClassName('gadget_serial_number')}
                                                             placeholder="Device serial number"
                                                         />
                                                         <InputError message={errors.gadget_serial_number} className="mt-1" />
@@ -1397,8 +1601,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="imei"
                                                             type="text"
                                                             value={data.imei as string || ''}
-                                                            onChange={(e) => setData('imei', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('imei', e.target.value)}
+                                                            className={getFieldClassName('imei')}
                                                             placeholder="IMEI number for smartphones/tablets"
                                                         />
                                                         <InputError message={errors.imei} className="mt-1" />
@@ -1412,8 +1616,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="color_variant"
                                                             type="text"
                                                             value={data.color_variant as string || ''}
-                                                            onChange={(e) => setData('color_variant', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('color_variant', e.target.value)}
+                                                            className={getFieldClassName('color_variant')}
                                                             placeholder="e.g., Space Gray, Midnight Blue"
                                                         />
                                                         <InputError message={errors.color_variant} className="mt-1" />
@@ -1427,8 +1631,8 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                             id="gadget_color"
                                                             type="text"
                                                             value={data.gadget_color as string || ''}
-                                                            onChange={(e) => setData('gadget_color', e.target.value)}
-                                                            className="mt-1"
+                                                            onChange={(e) => handleFieldChange('gadget_color', e.target.value)}
+                                                            className={getFieldClassName('gadget_color')}
                                                             placeholder="e.g., Black, White, Blue"
                                                         />
                                                         <InputError message={errors.gadget_color} className="mt-1" />
@@ -1440,13 +1644,11 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         </Label>
                                                         <Input
                                                             id="gadget_year_purchased"
-                                                            type="number"
+                                                            type="text"
                                                             value={data.gadget_year_purchased as string || ''}
                                                             onChange={(e) => setData('gadget_year_purchased', e.target.value)}
                                                             className="mt-1"
                                                             placeholder="e.g., 2023"
-                                                            min="1990"
-                                                            max={new Date().getFullYear()}
                                                         />
                                                         <InputError message={errors.gadget_year_purchased} className="mt-1" />
                                                     </div>
@@ -1457,13 +1659,11 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         </Label>
                                                         <Input
                                                             id="gadget_year_released"
-                                                            type="number"
+                                                            type="text"
                                                             value={data.gadget_year_released as string || ''}
                                                             onChange={(e) => setData('gadget_year_released', e.target.value)}
                                                             className="mt-1"
                                                             placeholder="e.g., 2023"
-                                                            min="1990"
-                                                            max={new Date().getFullYear()}
                                                         />
                                                         <InputError message={errors.gadget_year_released} className="mt-1" />
                                                     </div>
@@ -1524,7 +1724,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         Fee Type
                                                     </Label>
                                                     <Select value={fee.fee_type} onValueChange={(value) => updateFee(index, 'fee_type', value)}>
-                                                        <SelectTrigger className="mt-1">
+                                                        <SelectTrigger className={getFieldClassName(`fees.${index}.fee_type`)}>
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -1541,7 +1741,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         Calculate Fee On
                                                     </Label>
                                                     <Select value={fee.calculate_fee_on} onValueChange={(value) => updateFee(index, 'calculate_fee_on', value)}>
-                                                        <SelectTrigger className="mt-1">
+                                                        <SelectTrigger className={getFieldClassName(`fees.${index}.calculate_fee_on`)}>
                                                             <SelectValue />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -1556,11 +1756,10 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         Fixed Amount (₱)
                                                     </Label>
                                                     <Input
-                                                        type="number"
-                                                        step="0.01"
+                                                        type="text"
                                                         value={fee.fixed_amount}
                                                         onChange={(e) => updateFee(index, 'fixed_amount', e.target.value)}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`fees.${index}.fixed_amount`)}
                                                         placeholder="0.00"
                                                     />
                                                 </div>
@@ -1609,7 +1808,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         type="text"
                                                         value={penalty.penalty_name}
                                                         onChange={(e) => updatePenalty(index, 'penalty_name', e.target.value)}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`penalties.${index}.penalty_name`)}
                                                         placeholder="e.g., Late Payment Penalty"
                                                     />
                                                 </div>
@@ -1622,7 +1821,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         value={penalty.penalty_type}
                                                         onValueChange={(value) => updatePenalty(index, 'penalty_type', value)}
                                                     >
-                                                        <SelectTrigger className="mt-1">
+                                                        <SelectTrigger className={getFieldClassName(`penalties.${index}.penalty_type`)}>
                                                             <SelectValue placeholder="Select penalty type" />
                                                         </SelectTrigger>
                                                         <SelectContent>
@@ -1638,12 +1837,10 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     </Label>
                                                     <Input
                                                         id={`penalty_rate_${index}`}
-                                                        type="number"
-                                                        step="0.01"
-                                                        min="0"
+                                                        type="text"
                                                         value={penalty.penalty_rate}
                                                         onChange={(e) => updatePenalty(index, 'penalty_rate', e.target.value)}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`penalties.${index}.penalty_rate`)}
                                                         placeholder="100.00"
                                                     />
                                                 </div>
@@ -1654,11 +1851,10 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                     </Label>
                                                     <Input
                                                         id={`grace_period_${index}`}
-                                                        type="number"
-                                                        min="0"
+                                                        type="text"
                                                         value={penalty.grace_period_days}
                                                         onChange={(e) => updatePenalty(index, 'grace_period_days', e.target.value)}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`penalties.${index}.grace_period_days`)}
                                                         placeholder="7"
                                                     />
                                                 </div>
@@ -1673,7 +1869,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         id={`penalty_description_${index}`}
                                                         value={penalty.description}
                                                         onChange={(e) => updatePenalty(index, 'description', e.target.value)}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`penalties.${index}.description`)}
                                                         rows={3}
                                                         placeholder="Additional notes about this penalty..."
                                                     />
@@ -1722,7 +1918,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         type="text"
                                                         value={collateral.name}
                                                         onChange={(e) => updateCollateral(index, 'name', e.target.value)}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`collaterals.${index}.name`)}
                                                         placeholder="Enter collateral name"
                                                     />
                                                 </div>
@@ -1735,7 +1931,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         value={collateral.description}
                                                         onChange={(e) => updateCollateral(index, 'description', e.target.value)}
                                                         rows={3}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`collaterals.${index}.description`)}
                                                         placeholder="Describe the collateral"
                                                     />
                                                 </div>
@@ -1748,7 +1944,7 @@ export default function Loans({ loans, eligibleBorrowers }: LoansPageProps) {
                                                         value={collateral.defects}
                                                         onChange={(e) => updateCollateral(index, 'defects', e.target.value)}
                                                         rows={2}
-                                                        className="mt-1"
+                                                        className={getFieldClassName(`collaterals.${index}.defects`)}
                                                         placeholder="List any defects or issues (optional)"
                                                     />
                                                 </div>
